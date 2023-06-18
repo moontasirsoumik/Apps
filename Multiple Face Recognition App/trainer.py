@@ -35,7 +35,6 @@ class Train:
         imagePaths = [os.path.join(path, f) for f in os.listdir(path)]
         faceSamples = []
         ids = []
-        print(len(imagePaths))
 
         for imagePath in imagePaths:
             PIL_img = Image.open(imagePath).convert("L")  # convert it to grayscale

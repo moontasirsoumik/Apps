@@ -130,7 +130,6 @@ class MainApp(QMainWindow, Ui_MainWindow, Train):
 
     def start_train(self):
         self.ready_to_train = True
-        print(self.ready_to_train)
         if self.data_exists:
             if self.ready_to_train == True:
                 if not self.viewer_running:
