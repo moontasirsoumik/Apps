@@ -22,6 +22,11 @@ class Train:
         faces, ids = self.getImagesAndLabels(path)
         recognizer.train(faces, np.array(ids))
         recognizer.save("Trainer/trainer.yml")
+        # self.label_4.setStyleSheet(f"""background-color: #e8464e""")
+        # for j in range(1500):
+        #     self.label_4.setStyleSheet(
+        #         f"""background-color: qlineargradient(x1: 0, x2: {(float(j)*2)/(float(20))}, stop: .5 mediumseagreen, stop: 0.500000001 #e8464e)"""
+        #     )
         self.label_4.setText("{0} faces trained".format(len(np.unique(ids))))
         self.label_4.setStyleSheet(f"""background-color: mediumseagreen""")
         self.ready_to_train = False
