@@ -27,12 +27,12 @@ class Recognition(QThread):
         for i in range(len(x)):
             self.names.append(x[i][0])
         if browse_path == "None":
-            self.cam = cv2.VideoCapture(0)
+            self.cam = cv2.VideoCapture(0, cv2.CAP_DSHOW)
         else:
             try:
                 self.cam = cv2.VideoCapture(browse_path)
             except:
-                self.cam = cv2.VideoCapture(0)
+                self.cam = cv2.VideoCapture(0, cv2.CAP_DSHOW)
         self.cam.set(3, 640)  # set video width
         self.cam.set(4, 480)  # set video height
         self.minW = 0.1 * self.cam.get(3)
