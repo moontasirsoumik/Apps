@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- <title>AJAIRA - PC</title> -->
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+
+  <body>
+    <div class="container">
+      <div class="header">
+        <!-- Title has been removed -->
+      </div>
+      <div class="now-playing" id="now-playing">
+        <p>Now Playing: <span id="current-title">None</span></p>
+        <div class="progress-bar">
+          <div class="progress-bar-inner" id="progress-bar-inner"></div>
+        </div>
+      </div>
+      <div id="player-container" class="video-container">
+        <div id="player"></div>
+      </div>
+      <div class="controls-card">
+        <div class="controls" id="controls">
+          <div class="buttons">
+            <button id="play-pause-btn"><i class="fas fa-play"></i></button>
+            <button id="dark-mode-toggle" class="dark-mode-toggle">
+              <i class="fas fa-moon"></i>
+            </button>
+            <div class="toggle-switch">
+              <input
+                type="checkbox"
+                id="suggestions-toggle"
+                class="toggle-input"
+                checked
+              />
+              <label for="suggestions-toggle" class="toggle-label"></label>
+            </div>
+          </div>
+          <div class="volume-control">
+            <input
+              type="range"
+              id="volume-slider"
+              min="0"
+              max="100"
+              value="50"
+            />
+          </div>
+        </div>
+      </div>
+      <div class="video-form-card">
+        <form id="video-form" class="video-form">
+          <input
+            type="text"
+            id="youtube-link"
+            placeholder="Enter YouTube link or search here"
+            required
+          />
+          <button type="submit"><i class="fas fa-plus"></i> Add Video</button>
+          <div id="suggestions" class="suggestions"></div>
+        </form>
+      </div>
+      <div class="playlist" id="playlist">
+        {% for video in videos %}
+        <div
+          class="video-item"
+          data-id="{{ video.id }}"
+          data-video-id="{{ video.video_id }}"
+        >
+          <img
+            class="drag-area"
+            src="{{ video.thumbnail }}"
+            alt="{{ video.title }}"
+          />
+          <div class="video-info">
+            <p>{{ video.title }}</p>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.10.2/Sortable.min.js"></script>
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script src="{{ url_for('static', filename='js/script_pc.js') }}"></script>
+  </body>
+</html>

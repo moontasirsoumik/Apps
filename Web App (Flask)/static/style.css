@@ -1,0 +1,819 @@
+/* General Styles */
+body,
+h1,
+p,
+input,
+button {
+  margin: 0;
+  padding: 0;
+  font-family: "Segoe UI Variable Text", "Roboto", sans-serif;
+  color: #333;
+  box-sizing: border-box;
+  transition: color 0.3s, background-color 0.3s;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #f5f5f5;
+}
+
+body.dark-mode {
+  background-color: #121212;
+  color: #e0e0e0;
+}
+
+body.dark-mode .container {
+  background-color: #1e1e1e;
+}
+
+body.dark-mode .video-item {
+  background-color: #2e2e2e;
+  border: 1px solid #444;
+}
+
+body.dark-mode .video-info {
+  color: #ccc;
+}
+
+body.dark-mode .video-meta {
+  color: #b0b0b0;
+}
+
+body.dark-mode .controls-card,
+.dark-mode-toggle {
+  background-color: #555;
+  /* Changed background color for dark mode toggle */
+  color: #fff;
+}
+
+.dark-mode {
+  background-color: #121212;
+  color: #ddd;
+}
+
+.container {
+  width: 92%;
+  max-width: 1200px;
+  max-height: 98vh;
+  background-color: #fff;
+  border-radius: 15px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: max-height 0.3s;
+}
+
+.dark-mode .container {
+  background-color: #2c2c2c;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+}
+
+.dark-mode body {
+  background-color: #121212;
+  /* Ensures entire screen is dark */
+}
+
+.dark-mode h1,
+.dark-mode p,
+.dark-mode input,
+.dark-mode button,
+.dark-mode label {
+  color: #ddd;
+}
+
+.now-playing p {
+  font-weight: bold;
+}
+
+h1 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #333;
+  padding: 5px;
+  text-align: center;
+  transition: color 0.3s;
+}
+
+.header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.header button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.5rem;
+  transition: color 0.3s;
+}
+
+.header button:hover {
+  color: #ff9900;
+}
+
+.video-container,
+.controls-card,
+.video-form-card,
+.playlist {
+  margin-bottom: 10px;
+}
+
+.video-title {
+  font-weight: bold;
+  font-size: 1em;
+  /* Adjust the size as needed */
+}
+
+.video-meta {
+  font-size: 0.4em;
+  /* Slightly smaller size */
+  opacity: 0.8;
+  /* Reduced opacity for subtle appearance */
+  margin: 2px 0;
+  /* Adjust spacing as needed */
+}
+
+#player-container {
+  position: relative;
+  padding-top: 56.25%;
+  /* 16:9 Aspect Ratio */
+  margin-bottom: 10px;
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+#player {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.controls-card,
+.video-form-card {
+  padding: 10px;
+  border-radius: 15px;
+  background-color: #fff;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.dark-mode .controls-card,
+.dark-mode .video-form-card {
+  background-color: #333;
+  color: #ddd;
+}
+
+.controls {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.controls .buttons {
+  display: flex;
+  align-items: center;
+  /* Vertically center the elements */
+  gap: 10px;
+  /* Adjusted gap between buttons */
+}
+
+.controls button,
+.dark-mode-toggle,
+.suggestions-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  padding: 8px 20px;
+  /* Reduced padding for smaller buttons */
+  border-radius: 25px;
+  cursor: pointer;
+  transition: background-color 0.3s, box-shadow 0.3s;
+}
+
+.controls button i,
+.dark-mode-toggle i,
+.suggestions-toggle i {
+  width: 20px;
+  /* Icon size */
+  height: 20px;
+  /* Icon size */
+  display: inline-block;
+  text-align: center;
+  line-height: 20px;
+  color: #fff;
+}
+
+.dark-mode .controls button,
+.dark-mode .dark-mode-toggle,
+.dark-mode .suggestions-toggle {
+  background-color: #555;
+  color: #fff;
+  /* Changed background color for dark mode toggle */
+}
+
+.controls button,
+.video-form button {
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  padding: 8px 20px;
+  /* Reduced padding for smaller buttons */
+  border-radius: 25px;
+  cursor: pointer;
+  transition: background-color 0.3s, box-shadow 0.3s;
+}
+
+.controls button:hover,
+.video-form button:hover {
+  background-color: #0056b3;
+  color: #fff;
+}
+
+.dark-mode .controls button,
+.dark-mode .video-form button {
+  background-color: #007bff;
+  color: #fff;
+}
+
+.dark-mode .controls button:hover,
+.dark-mode .video-form button:hover {
+  background-color: #0056b3;
+  color: #fff;
+}
+
+.controls .dark-mode-toggle {
+  background-color: #555;
+  /* Changed background color for dark mode toggle */
+  color: #fff;
+}
+
+.controls .dark-mode-toggle:hover {
+  background-color: #444;
+}
+
+.volume-control {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+#volume-slider {
+  margin-left: 10px;
+  width: 100px;
+}
+
+.video-form {
+  display: flex;
+  width: 100%;
+  gap: 10px;
+}
+
+.video-form input {
+  flex-grow: 1;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+}
+
+.dark-mode .video-form input {
+  background-color: #333;
+  color: #ddd;
+  border-color: #444;
+}
+
+/* General Styles (Mobile-first) */
+.playlist {
+  display: flex;
+  flex-direction: column;
+  border-radius: 15px;
+  gap: 8px;
+  /* max-height: calc(92vh - 200px);  */
+  /* flex: 1; */
+  overflow-y: auto;
+  transition: max-height 0.3s;
+}
+
+.empty-container {
+  max-height: 20vh;
+  /* Set a smaller height when empty */
+}
+
+.full-container {
+  max-height: 98vh;
+  /* Max height when full */
+}
+
+/* Styles for larger screens (PC)
+@media (min-width: 768px) {
+    .playlist {
+        max-height: calc(50vh - 200px); 
+    }
+} */
+
+.video-item {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 15px;
+  background-color: #fff;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: background-color 0.3s, box-shadow 0.3s;
+}
+
+.video-item.removing {
+  background-color: #ff4c4c !important;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease-out, background-color 0.3s ease-out;
+}
+
+.video-item:hover {
+  background-color: #f0f0f0;
+}
+
+.dark-mode .video-item {
+  background-color: #333;
+  border-color: #444;
+}
+
+.video-item img {
+  width: 120px;
+  height: 80px;
+  border-radius: 8px;
+  margin-right: 20px;
+  object-fit: cover;
+}
+
+.video-info {
+  flex-grow: 1;
+  text-align: left;
+}
+
+.video-info p {
+  font-size: 1rem;
+  color: #333;
+  transition: color 0.3s;
+}
+
+.dark-mode .video-info p {
+  color: #ddd;
+}
+
+.remove-btn {
+  background: none;
+  border: none;
+  color: #ff5c5c;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: color 0.3s;
+}
+
+.remove-btn:hover {
+  color: #ff1a1a;
+}
+
+.playing {
+  border: 2px solid #007bff;
+  background-color: #e9f5ff;
+  transition: background-color 0.3s;
+}
+
+.dark-mode .playing {
+  background-color: #004085;
+  border-color: #0056b3;
+}
+
+.now-playing {
+  padding: 10px;
+  border-radius: 15px;
+  background-color: #fff;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  margin-bottom: 10px;
+  transition: background-color 0.3s, color 0.3s;
+
+  user-select: none;
+  -webkit-user-select: none; /* Safari */
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* IE10+/Edge */
+}
+
+.dark-mode .now-playing {
+  background-color: #333;
+  color: #ddd;
+}
+
+/* Add gap below the "Now Playing:" text */
+.now-playing p {
+  margin-bottom: 10px;
+  /* Adds 10px gap */
+}
+
+/* For the phone version */
+.seek-bar {
+  position: relative;
+  width: 100%;
+}
+
+.seek-bar {
+  position: relative;
+  width: 100%;
+}
+
+.seek-time-overlay {
+  position: absolute;
+  bottom: 25px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 2px 5px;
+  border-radius: 5px;
+  display: none;
+  font-size: 0.8em;
+}
+
+#seek-slider {
+  width: 100%;
+}
+
+/* Additional styles for dark mode */
+body.dark-mode {
+  background-color: #121212;
+  color: #e0e0e0;
+}
+
+body.dark-mode .container {
+  background-color: #1e1e1e;
+}
+
+body.dark-mode .video-item {
+  background-color: #2e2e2e;
+  border: 1px solid #444;
+}
+
+body.dark-mode .video-info {
+  color: #ccc;
+}
+
+body.dark-mode .video-meta {
+  color: #b0b0b0;
+}
+
+body.dark-mode .controls-card,
+.dark-mode-toggle {
+  background-color: #555;
+  /* Changed background color for dark mode toggle */
+  color: #fff;
+}
+
+/* Ensure the styles apply for the existing classes */
+.dark-mode {
+  background-color: #121212;
+  color: #ddd;
+}
+
+.container {
+  width: 92%;
+  max-width: 800px;
+  max-height: 95vh;
+  background-color: #fff;
+  padding: 10px;
+  border-radius: 15px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  transition: background-color 0.3s, box-shadow 0.3s;
+  overflow-y: hidden;
+}
+
+.dark-mode .container {
+  background-color: #2c2c2c;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+}
+
+.dark-mode body {
+  background-color: #121212;
+  /* Ensures entire screen is dark */
+}
+
+.dark-mode h1,
+.dark-mode p,
+.dark-mode input,
+.dark-mode button,
+.dark-mode label {
+  color: #ddd;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 5px;
+  background-color: #ddd;
+  border-radius: 2.5px;
+  margin-top: 5px;
+  overflow: hidden;
+  transition: background-color 0.3s;
+}
+
+.progress-bar-inner {
+  height: 100%;
+  width: 0;
+  background-color: #007bff;
+  transition: width 0.3s;
+}
+
+.dark-mode .progress-bar {
+  background-color: #555;
+}
+
+.dark-mode .progress-bar-inner {
+  background-color: #0056b3;
+}
+
+/* Additional styles for drag-and-drop */
+.drag-area {
+  cursor: grab;
+}
+
+.dragging {
+  opacity: 0.8;
+  background-color: #f0f0f0;
+  /* Color for dragging items */
+}
+
+.ghost {
+  opacity: 0.5;
+  /* Style for the ghost item */
+}
+
+.chosen {
+  border: 2px dashed #007bff;
+}
+
+.dragging .drag-area {
+  cursor: grabbing;
+}
+
+/* Style for playing videos */
+.video-item.playing {
+  border: 2px solid #007bff;
+  background-color: #e9f5ff;
+  transition: background-color 0.3s, border-color 0.3s;
+}
+
+.dark-mode .video-item.playing {
+  background-color: #004085;
+  border-color: #0056b3;
+}
+
+/* General style for video items to ensure uniform appearance */
+.video-item {
+  transition: background-color 0.3s, border-color 0.3s;
+}
+
+/* Ensure the .dragging class is distinctly styled */
+.video-item.dragging {
+  border: 2px solid #007bff;
+}
+
+#suggestion-overlay {
+  position: absolute;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border-radius: 5px;
+  overflow: hidden;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+  display: none;
+  transition: background-color 0.3s, border-color 0.3s;
+}
+
+.suggestion-item,
+.error-message {
+  padding: 10px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.suggestion-item:hover {
+  background-color: #f0f0f0;
+}
+
+.error-message {
+  color: #ff0000;
+  cursor: default;
+}
+
+.dark-mode #suggestion-overlay {
+  background-color: #333;
+  border-color: #444;
+}
+
+.dark-mode .video-item.dragging {
+  border: 2px solid #007bff;
+}
+
+.dark-mode .suggestion-item,
+.dark-mode .error-message {
+  color: #ddd;
+}
+
+.dark-mode .suggestion-item:hover {
+  background-color: #444;
+}
+
+/* Toggle Switch Styles */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 20px;
+  vertical-align: middle;
+  /* Ensure the toggle is vertically aligned */
+}
+
+.toggle-input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-label {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  border-radius: 34px;
+  transition: background-color 0.3s;
+}
+
+.toggle-label:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  border-radius: 50%;
+  transition: transform 0.3s;
+}
+
+.toggle-input:checked + .toggle-label {
+  background-color: #007bff;
+}
+
+.toggle-input:checked + .toggle-label:before {
+  transform: translateX(20px);
+}
+
+.dark-mode .toggle-label {
+  background-color: #666;
+}
+
+.dark-mode .toggle-input:checked + .toggle-label {
+  background-color: #007bff;
+}
+
+/* Suggestion Overlay for Toggle */
+#suggestions-overlay {
+  position: absolute;
+  padding: 5px 10px;
+  /* Smaller padding for a more compact box */
+  background-color: #333;
+  color: #fff;
+  border-radius: 5px;
+  /* Smaller border radius */
+  font-size: 0.8em;
+  /* Smaller font size */
+  display: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 1000;
+  /* Ensure it's above other elements */
+}
+
+#suggestions-overlay.show {
+  display: block;
+  opacity: 1;
+}
+
+body.dark-mode #suggestions-overlay {
+  background-color: #444;
+}
+
+#volume-overlay {
+  position: absolute;
+  padding: 5px 10px;
+  background-color: #333;
+  color: #fff;
+  border-radius: 5px;
+  font-size: 0.8em;
+  display: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 1000;
+}
+
+#volume-overlay.show {
+  display: block;
+  opacity: 1;
+}
+
+body.dark-mode #volume-overlay {
+  background-color: #444;
+}
+
+#notification-overlay {
+  position: fixed;
+  padding: 5px 10px;
+  background-color: #333;
+  color: #fff;
+  border-radius: 5px;
+  font-size: 0.8em;
+  display: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 1000;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+}
+
+#notification-overlay.show {
+  display: block;
+  opacity: 1;
+}
+
+body.dark-mode #notification-overlay {
+  background-color: #444;
+}
+
+.unselectable {
+  user-select: none;
+  -webkit-user-select: none; /* Safari */
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* IE10+/Edge */
+}
+
+.context-menu {
+  position: absolute;
+  background-color: #ffffff;
+  border: 1px solid #ddd;
+  box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.15);
+  border-radius: 5px;
+  z-index: 1000;
+  display: none;
+  padding: 5px 0;
+  font-size: 0.9em; /* Match the standard text size */
+}
+
+.context-menu-item {
+  padding: 8px 15px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.context-menu-item:hover {
+  background-color: #f0f0f0;
+}
+
+.dark-mode .context-menu {
+  background-color: #333;
+  border-color: #444;
+  color: #ddd;
+}
+
+.dark-mode .context-menu-item:hover {
+  background-color: #444;
+}
