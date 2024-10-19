@@ -181,10 +181,12 @@ def apply_filter(data, lowcut, highcut, fs, filter_type, order=5):
         b, a = bessel_bandpass(lowcut, highcut, fs, order)
         return lfilter(b, a, data)
 
+import scipy.signal
+
 @st.cache_data
 def suggest_bandpass_values(audio_data, sr):
     """
-    Suggest band-pass filter cutoff values based on the audio's frequency distribution.
+    Suggest advanced band-pass filter cutoff values based on multiple audio characteristics.
 
     Parameters:
     - audio_data: Input audio data.
@@ -198,17 +200,21 @@ def suggest_bandpass_values(audio_data, sr):
     freqs = np.fft.fftfreq(len(fft), 1/sr)
     magnitude = np.abs(fft)
     
-    # Consider only positive frequencies
     positive_freqs = freqs[:len(freqs)//2]
     positive_magnitude = magnitude[:len(magnitude)//2]
     
-    # Calculate total energy and cumulative energy
     total_energy = np.sum(positive_magnitude)
-    cumulative_energy = np.cumsum(positive_magnitude) / total_energy
     
-    # Find frequencies where cumulative energy crosses 10% and 90%
+    spectral_centroid = np.sum(positive_freqs * positive_magnitude) / total_energy
+    
+    cumulative_energy = np.cumsum(positive_magnitude) / total_energy
+    spectral_rolloff = positive_freqs[np.searchsorted(cumulative_energy, 0.85)]
+    
     lowcut_suggested = positive_freqs[np.searchsorted(cumulative_energy, 0.1)]
     highcut_suggested = positive_freqs[np.searchsorted(cumulative_energy, 0.9)]
+    
+    lowcut_suggested = (lowcut_suggested + spectral_centroid * 0.2) / 2 
+    highcut_suggested = (highcut_suggested + spectral_rolloff * 0.8) / 2 
     
     return int(lowcut_suggested), int(highcut_suggested)
 
@@ -668,6 +674,11 @@ if audio_file is not None:
         st.audio(noisy_audio_buffer, format='audio/wav')
         st.success("Noise added successfully!")
         plot_time_domain(noisy_audio, audio_data, sr, noisy="Noisy", cleaned="Original")
+        
+        # Suggest bandpass cutoff frequencies
+        lowcut_suggested, highcut_suggested = suggest_bandpass_values(noisy_audio, sr)
+        st.write(f"Suggested Low Cutoff: {lowcut_suggested} Hz")
+        st.write(f"Suggested High Cutoff: {highcut_suggested} Hz")
     else:
         noisy_audio = audio_data
 
