@@ -50,7 +50,7 @@ $ pip install streamlit numpy pandas librosa soundfile matplotlib altair scipy
 ## Running the App
 Once you have all the dependencies installed, you can run the app using Streamlit:
 ```sh
-$ streamlit run app.py
+$ python -m streamlit run app.py
 ```
 This will start a local server, and you can open the app in your browser at `http://localhost:8501`.
 
