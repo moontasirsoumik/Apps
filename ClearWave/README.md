@@ -1,4 +1,4 @@
-# ClearWave Noise Cancellation App
+# ClearWave
 
 ClearWave is a web-based application for noise cancellation, allowing you to upload audio files, add noise, and filter the noise to get a cleaner version of your audio. The application provides a user-friendly interface for band-pass filtering using different filter types and visualizes both time-domain and frequency-domain analysis.
 
