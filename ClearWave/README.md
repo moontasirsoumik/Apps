@@ -16,8 +16,8 @@ ClearWave is a web-based application for noise cancellation, allowing you to upl
 
 ### Step 1: Clone the Repository
 ```sh
-$ git clone https://github.com/yourusername/clearwave-noise-cancellation.git
-$ cd clearwave-noise-cancellation
+$ git clone https://github.com/moontasirsoumik/Apps.git
+$ cd Apps/ClearWave
 ```
 
 ### Step 2: Create a Virtual Environment (Optional but Recommended)
@@ -75,3 +75,10 @@ This will start a local server, and you can open the app in your browser at `htt
 
 ## Contributing
 Contributions are welcome! If you have suggestions for improvements, please feel free to open an issue or create a pull request.
+
+## License
+This project does not currently have a specified license. If you are interested in contributing, please contact us for more details.
+
+## Acknowledgements
+- Inspired by the need for easy and intuitive noise cancellation tools.
+- Thanks to the open-source community for providing the libraries used in this project.
