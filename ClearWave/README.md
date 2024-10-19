@@ -101,24 +101,31 @@ For questions or suggestions, feel free to contact us at [moontasir.soumik@helsi
 ## Appendix
 ### Filter Types Explained
 **1. Butterworth Band-pass Filter**
+
 The Butterworth filter is designed to have as flat a frequency response as possible in the passband. It has no ripples in either the passband or the stopband, making it ideal for applications requiring a smooth frequency response. The Butterworth filter is often used in audio processing because it provides a balance between simplicity and performance, offering a relatively gradual roll-off without introducing much distortion.
 
 **2. FIR Band-pass Filter**
+
 Finite Impulse Response (FIR) filters have a finite response to an impulse input, meaning that the filter output eventually settles to zero. FIR filters are inherently stable and can provide a linear phase response, which preserves the shape of the input signal. This makes FIR filters suitable for applications where maintaining the phase integrity of the signal is important, such as in audio and communication systems.
 
 **3. IIR Band-pass Filter**
+
 Infinite Impulse Response (IIR) filters have an impulse response that theoretically continues indefinitely. IIR filters can achieve a sharper cutoff with fewer coefficients compared to FIR filters, making them more efficient for certain applications. However, they may introduce phase distortion, which can affect the shape of the filtered signal. IIR filters, like the Butterworth type, are commonly used when computational efficiency is crucial.
 
 **4. Chebyshev Type I Band-pass Filter**
+
 The Chebyshev Type I filter provides a steeper roll-off compared to the Butterworth filter by allowing ripples in the passband. The amount of ripple is determined by a parameter that can be adjusted to control the trade-off between passband flatness and roll-off steepness. Chebyshev Type I filters are used in applications where a sharper transition between passband and stopband is required, and some variation in the passband can be tolerated.
 
 **5. Chebyshev Type II Band-pass Filter**
+
 Chebyshev Type II filters have a steeper roll-off by allowing ripples in the stopband rather than the passband, resulting in a flat passband response. This type of filter is useful when the passband must remain flat, but some attenuation in the stopband is acceptable. Chebyshev Type II filters provide a good balance between roll-off steepness and passband performance, making them suitable for applications where maintaining a clean passband is important.
 
 **6. Elliptic Band-pass Filter**
+
 The elliptic (or Cauer) filter provides the steepest roll-off for a given filter order by allowing ripples in both the passband and stopband. This makes the elliptic filter highly efficient in terms of achieving a narrow transition band. However, the presence of ripples in both the passband and stopband means that this filter may introduce more distortion compared to other filter types. Elliptic filters are often used in applications that require the most efficient use of filter order, such as in communication systems.
 
 **7. Bessel Band-pass Filter**
+
 The Bessel filter is designed to provide a maximally flat group delay, which helps preserve the wave shape of filtered signals, particularly in the time domain. This makes Bessel filters ideal for audio applications and other situations where maintaining the temporal characteristics of the signal is crucial. The Bessel filter sacrifices some roll-off sharpness to achieve a constant group delay, which ensures minimal phase distortion.
 
 ### Suggested Cutoff Frequencies
