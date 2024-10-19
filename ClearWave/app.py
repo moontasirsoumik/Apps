@@ -3,8 +3,8 @@ import numpy as np
 import pandas as pd
 import librosa
 import soundfile as sf
-import matplotlib.pyplot as plt
 import matplotlib.patheffects as path_effects
+from scipy import signal
 from scipy.signal import butter, lfilter, firwin, freqz, iirfilter, cheby1, cheby2, ellip, bessel
 import io
 import altair as alt
@@ -655,100 +655,218 @@ def plot_snr_vs_frequency(original_audio, cleaned_audio, sr, max_points=5000):
     
     st.altair_chart(chart, use_container_width=True)
 
-st.title("ClearWave")
-st.header("Upload Audio")
-audio_file = st.file_uploader("Upload your audio file", type=['wav', 'mp3'])
+@st.cache_data    
+def plot_impulse_response(lowcut, highcut, sr, filter_type, order=5):
+    """
+    Plot the impulse response of the selected filter.
 
+    Parameters:
+    - lowcut: Low cutoff frequency.
+    - highcut: High cutoff frequency.
+    - sr: Sampling rate.
+    - filter_type: Type of filter applied.
+    - order: Filter order (for IIR filters).
+    """
+    # Create a short impulse signal (delta function)
+    impulse = np.zeros(100)
+    impulse[0] = 1  # Set first value to 1, representing the impulse
+
+    # Apply the filter to the impulse signal
+    filtered_impulse = apply_filter(impulse, lowcut, highcut, sr, filter_type, order)
+
+    # Time axis for plotting
+    time = np.arange(0, len(impulse)) / sr
+
+    # Plot the impulse response
+    df = pd.DataFrame({
+        'Time (s)': time,
+        'Filtered Impulse Response': filtered_impulse
+    })
+
+    # Create the plot
+    chart = alt.Chart(df).mark_line(opacity=0.5).encode(
+        x=alt.X('Time (s)', title='Time (s)'),
+        y=alt.Y('Filtered Impulse Response', title='Amplitude'),
+        tooltip=['Time (s)', 'Filtered Impulse Response']
+    ).properties(
+        title=f"{filter_type} Impulse Response",
+        width=500
+    ).interactive()
+
+    st.altair_chart(chart, use_container_width=True)
+
+@st.cache_data 
+def plot_step_response(lowcut, highcut, sr, filter_type, order=5):
+    """
+    Plot the step response of the selected filter.
+
+    Parameters:
+    - lowcut: Low cutoff frequency.
+    - highcut: High cutoff frequency.
+    - sr: Sampling rate.
+    - filter_type: Type of filter applied.
+    - order: Filter order (for IIR filters).
+    """
+    # Create a step signal (all ones after the initial point)
+    step_signal = np.ones(100)
+
+    # Apply the filter to the step signal
+    filtered_step = apply_filter(step_signal, lowcut, highcut, sr, filter_type, order)
+
+    # Time axis for plotting
+    time = np.arange(0, len(step_signal)) / sr
+
+    # Plot the step response
+    df = pd.DataFrame({
+        'Time (s)': time,
+        'Filtered Step Response': filtered_step
+    })
+
+    # Create the plot
+    chart = alt.Chart(df).mark_line(opacity=0.5).encode(
+        x=alt.X('Time (s)', title='Time (s)'),
+        y=alt.Y('Filtered Step Response', title='Amplitude'),
+        tooltip=['Time (s)', 'Filtered Step Response']
+    ).properties(
+        title=f"{filter_type} Step Response",
+        width=500
+    ).interactive()
+
+    st.altair_chart(chart, use_container_width=True)
+
+# Title and Header for the App in a non-collapsible section for uniformity
+with st.container():
+    st.markdown(
+        "<div style='background-color: #f0f0f5; padding: 10px; border-radius: 10px;'>"
+        "<h1 style='text-align: center; color: #333333; font-family: Arial;'>ClearWave</h1>"
+        "</div>",
+        unsafe_allow_html=True
+    )
+
+# Add a gap between the title container and the first expander
+st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
+
+# 1. Upload Audio Section with improved feedback and layout
+with st.expander("1. Upload Audio", expanded=True):
+    st.write("**Upload an audio file to begin.**")
+    audio_file = st.file_uploader("Upload your audio file", type=['wav', 'mp3'])
+
+    if audio_file is not None:
+        # Make the audio player as wide as in section 2 and 3
+        st.audio(audio_file, format='audio/wav')
+
+        # Load the audio data
+        audio_data, sr = load_audio(audio_file)
+        st.success("**Audio loaded successfully!**")
+
+        # Automatically suggest bandpass filter cutoff frequencies
+        lowcut_suggested, highcut_suggested = suggest_bandpass_values(audio_data, sr)
+
+        # Push high cutoff to the far right using 3 columns with a uniform gap
+        col1, col2, col3, col4, col5 = st.columns([0.5, 1, 1, 1, 0.5])
+        col2.metric("Suggested Low Cutoff", f"{lowcut_suggested} Hz")
+        col4.metric("Suggested High Cutoff", f"{highcut_suggested} Hz")
+
+        # Display time-domain and frequency-domain analyses of the original audio
+        plot_time_domain(audio_data, None, sr)  # Time-domain representation
+        plot_frequency_domain(audio_data, None, sr)  # Frequency-domain representation
+
+# 2. Add Noise Section with refined controls
 if audio_file is not None:
-    # Play the uploaded audio file
-    st.audio(audio_file, format='audio/wav')
-    
-    # Load the audio data and sampling rate from the uploaded file
-    audio_data, sr = load_audio(audio_file)
-    st.success("Audio loaded successfully!")
-    
-    # Automatically suggest bandpass filter cutoff frequencies based on the audio characteristics
-    lowcut_suggested, highcut_suggested = suggest_bandpass_values(audio_data, sr)
-    st.write(f"Suggested Low Cutoff: {lowcut_suggested} Hz")
-    st.write(f"Suggested High Cutoff: {highcut_suggested} Hz")
+    with st.expander("2. Add Noise (Optional)", expanded=False):
+        st.write("You can add **synthetic noise** to the audio for testing purposes.")
 
-    # Display time-domain and frequency-domain analyses of the original audio
-    st.header("Time Domain and Frequency Analysis")
-    plot_time_domain(audio_data, None, sr)  # Plot the time-domain representation
-    plot_frequency_domain(audio_data, None, sr)  # Plot the frequency-domain representation
+        # Checkbox for adding noise
+        add_noise = st.checkbox("Add Noise to Audio")
 
-if audio_file is not None:
-    st.header("Add Noise (Optional)")
-    
-    # Option for the user to add synthetic noise to the audio
-    add_noise = st.checkbox("Add Noise to Audio")
-    
-    if add_noise:
-        # User selects noise type and level
-        noise_type = st.selectbox("Select noise type", ["Low Frequency", "High Frequency", "Both"])
-        noise_level = st.slider("Select noise level", 0.0, 1.0, 0.05)  # Noise level as a fraction
-        
-        # Generate noise based on the selected type (low, high, or both frequencies)
-        duration = len(audio_data) / sr  # Calculate duration of the audio in seconds
-        time = np.linspace(0., duration, len(audio_data))  # Create time vector for noise generation
-        low_freq_noise = np.sin(2 * np.pi * 50 * time) if noise_type in ["Low Frequency", "Both"] else np.zeros_like(audio_data)
-        high_freq_noise = np.sin(2 * np.pi * 8000 * time) if noise_type in ["High Frequency", "Both"] else np.zeros_like(audio_data)
-        noise = noise_level * (low_freq_noise + high_freq_noise)  # Combine noise based on user selection
-        
-        # Add generated noise to the original audio
-        noisy_audio = audio_data + noise
-        
-        # Play the noisy audio for user preview
-        noisy_audio_buffer = io.BytesIO()
-        sf.write(noisy_audio_buffer, noisy_audio, sr, format='WAV')
-        noisy_audio_buffer.seek(0)
-        st.audio(noisy_audio_buffer, format='audio/wav')
-        st.success("Noise added successfully!")
-        
-        # Plot time-domain comparison of noisy vs original audio
-        plot_time_domain(noisy_audio, audio_data, sr, noisy="Noisy", cleaned="Original")
-        
-        # Suggest bandpass filter cutoff frequencies based on the noisy audio
-        lowcut_suggested, highcut_suggested = suggest_bandpass_values(noisy_audio, sr)
-        st.write(f"Suggested Low Cutoff: {lowcut_suggested} Hz")
-        st.write(f"Suggested High Cutoff: {highcut_suggested} Hz")
-    else:
-        noisy_audio = audio_data  # If no noise is added, use original audio
+        if add_noise:
+            # Better control elements with better UI text
+            noise_type = st.selectbox("Select Noise Type", ["Low Frequency", "High Frequency", "Both"])
+            noise_level = st.slider("Select Noise Level", 0.0, 1.0, 0.05)
 
+            # Generate and add noise based on user selection
+            duration = len(audio_data) / sr
+            time = np.linspace(0., duration, len(audio_data))
+            low_freq_noise = np.sin(2 * np.pi * 50 * time) if noise_type in ["Low Frequency", "Both"] else np.zeros_like(audio_data)
+            high_freq_noise = np.sin(2 * np.pi * 8000 * time) if noise_type in ["High Frequency", "Both"] else np.zeros_like(audio_data)
+            noise = noise_level * (low_freq_noise + high_freq_noise)
+
+            noisy_audio = audio_data + noise
+
+            # Play the noisy audio for preview
+            noisy_audio_buffer = io.BytesIO()
+            sf.write(noisy_audio_buffer, noisy_audio, sr, format='WAV')
+            noisy_audio_buffer.seek(0)
+
+            st.success("Noise added successfully!")
+            st.audio(noisy_audio_buffer, format='audio/wav')
+
+            # Plot noisy vs original audio
+            st.subheader("Noisy Audio Analysis")
+            plot_time_domain(noisy_audio, audio_data, sr, noisy="Noisy", cleaned="Original")
+            plot_frequency_domain(noisy_audio, None, sr)
+
+            # Display suggested cutoff frequencies for noisy audio
+            lowcut_suggested, highcut_suggested = suggest_bandpass_values(noisy_audio, sr)
+            # Push high cutoff to the far right using 3 columns with a uniform gap
+            col1, col2, col3, col4, col5 = st.columns([0.5, 1, 1, 1, 0.5])
+            col2.metric("Suggested Low Cutoff", f"{lowcut_suggested} Hz")
+            col4.metric("Suggested High Cutoff", f"{highcut_suggested} Hz")
+        else:
+            noisy_audio = audio_data
+
+# 3. Apply Noise Cancellation Section with better layout and feedback
 if audio_file is not None and noisy_audio is not None:
-    st.header("Apply Noise Cancellation")
-    
-    # User selects the type of bandpass filter to apply
-    filter_type = st.selectbox("Select filter type", ['Butterworth Band-pass', 'FIR Band-pass', 'IIR Band-pass', 'Chebyshev Type I Band-pass', 'Chebyshev Type II Band-pass', 'Elliptic Band-pass', 'Bessel Band-pass'])
-    
-    # Sliders for adjusting low and high cutoff frequencies, initialized with suggested values
-    lowcut = st.slider("Low Frequency Cutoff", 50, 8000, lowcut_suggested, key="lowcut_slider")
-    highcut = st.slider("High Frequency Cutoff", 50, 8000, highcut_suggested, key="highcut_slider")
-    
-    # Ensure valid cutoff frequencies are chosen (highcut > lowcut)
-    if lowcut > 0 and highcut > lowcut:
-        # Apply the selected bandpass filter to the noisy audio
-        cleaned_audio = apply_filter(noisy_audio, lowcut, highcut, sr, filter_type)
-        
-        # Play the cleaned (filtered) audio for user preview
-        cleaned_audio_buffer = io.BytesIO()
-        sf.write(cleaned_audio_buffer, cleaned_audio, sr, format='WAV')
-        cleaned_audio_buffer.seek(0)
-        st.audio(cleaned_audio_buffer, format='audio/wav')
-        
-        # Plot time-domain and frequency-domain comparisons of noisy vs cleaned audio
-        plot_time_domain(noisy_audio, cleaned_audio, sr)  # Time-domain comparison
-        plot_frequency_domain(noisy_audio, cleaned_audio, sr, lowcut, highcut)  # Frequency-domain comparison
-        
-        # Display additional analysis plots for deeper understanding
-        plot_spectral_centroid(audio_data, sr)  # Plot the spectral centroid over time
-        plot_filter_response(lowcut, highcut, sr, filter_type)  # Plot the filter's frequency response
-        plot_phase_response(lowcut, highcut, sr, filter_type, order=5)  # Plot the phase response of the filter
-        plot_group_delay(lowcut, highcut, sr, filter_type, order=5)  # Plot the group delay of the filter
-        
-        # Calculate and display the Signal-to-Noise Ratio (SNR) after filtering
+    with st.expander("3. Apply Noise Cancellation", expanded=False):
+        st.write("Apply a **noise cancellation filter** to the noisy audio.")
+
+        # Filter settings in a cleaner layout
+        filter_type = st.selectbox("Select Filter Type", [
+            'Butterworth Band-pass', 'FIR Band-pass', 'IIR Band-pass',
+            'Chebyshev Type I Band-pass', 'Chebyshev Type II Band-pass',
+            'Elliptic Band-pass', 'Bessel Band-pass'
+        ])
+
+        col1, col2 = st.columns(2)
+        lowcut = col1.slider("Low Frequency Cutoff", 50, 8000, lowcut_suggested, key="lowcut_slider")
+        highcut = col2.slider("High Frequency Cutoff", 50, 8000, highcut_suggested, key="highcut_slider")
+
+        # Apply the filter and display audio
+        if lowcut > 0 and highcut > lowcut:
+            cleaned_audio = apply_filter(noisy_audio, lowcut, highcut, sr, filter_type)
+
+            # Play the cleaned (filtered) audio for preview
+            cleaned_audio_buffer = io.BytesIO()
+            sf.write(cleaned_audio_buffer, cleaned_audio, sr, format='WAV')
+            cleaned_audio_buffer.seek(0)
+
+            st.success("Noise cancellation applied successfully!")
+            st.audio(cleaned_audio_buffer, format='audio/wav')
+
+            # Plot noisy vs cleaned audio
+            plot_time_domain(noisy_audio, cleaned_audio, sr)
+            plot_frequency_domain(noisy_audio, cleaned_audio, sr, lowcut, highcut)
+
+# 4. Analysis and Comparison Section with cleaner analysis layout
+if audio_file is not None and noisy_audio is not None:
+    with st.expander("4. Analysis & Comparison", expanded=False):
+        st.write("Analyze the **results of noise cancellation** using advanced metrics and plots.")
+
+        # Spectral centroid, filter response, and SNR comparison
+        plot_spectral_centroid(audio_data, sr)
+        plot_filter_response(lowcut, highcut, sr, filter_type)
+        plot_phase_response(lowcut, highcut, sr, filter_type, order=5)
+        plot_group_delay(lowcut, highcut, sr, filter_type, order=5)
+
+        # Display SNR after filtering with a metric
         snr = calculate_snr(noisy_audio, cleaned_audio)
-        st.write(f"Signal-to-Noise Ratio (SNR) after filtering: {snr:.2f} dB")
-        
-        # Plot the SNR across the frequency spectrum for further analysis
+        st.metric("Signal-to-Noise Ratio (SNR)", f"{snr:.2f} dB")
+
+        # Plot SNR across the frequency spectrum
         plot_snr_vs_frequency(noisy_audio, cleaned_audio, sr)
+        
+        # Plot the impulse response of the filter
+        plot_impulse_response(lowcut, highcut, sr, filter_type)
+
+        # Plot the step response of the filter
+        plot_step_response(lowcut, highcut, sr, filter_type)
