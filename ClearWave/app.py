@@ -19,6 +19,16 @@ from scipy.signal import (
 import io
 import altair as alt
 
+all_filters = [
+    "Butterworth Band-pass",
+    "FIR Band-pass",
+    "IIR Band-pass",
+    "Chebyshev Type I Band-pass",
+    "Chebyshev Type II Band-pass",
+    "Elliptic Band-pass",
+    "Bessel Band-pass",
+]
+
 
 def butter_bandpass(lowcut, highcut, fs, order=5):
     """
@@ -174,7 +184,7 @@ def bessel_bandpass(lowcut, highcut, fs, order=5):
     return b, a
 
 
-def apply_filter(data, lowcut, highcut, fs, filter_type, order=5):
+def apply_filter(data, lowcut, highcut, fs, filter_type, order=5, rp=None, rs=None):
     """
     Apply the selected filter type to the input audio data.
 
@@ -185,6 +195,8 @@ def apply_filter(data, lowcut, highcut, fs, filter_type, order=5):
     - fs: Sampling frequency (Hz).
     - filter_type: Type of filter to apply (e.g., 'Butterworth', 'FIR').
     - order: Filter order (applicable to IIR filters).
+    - rp: Passband ripple (dB) for Chebyshev I and Elliptic filters (optional).
+    - rs: Stopband attenuation (dB) for Chebyshev II and Elliptic filters (optional).
 
     Returns:
     - Filtered audio data (numpy array).
@@ -199,17 +211,26 @@ def apply_filter(data, lowcut, highcut, fs, filter_type, order=5):
         b, a = iir_bandpass(lowcut, highcut, fs, order)  # Design general IIR filter
         return lfilter(b, a, data)  # Apply IIR filter
     elif filter_type == "Chebyshev Type I Band-pass":
+        # Use the provided rp, or fall back to a default if not provided
+        rp = rp if rp is not None else 0.5
         b, a = cheby1_bandpass(
-            lowcut, highcut, fs, order
+            lowcut, highcut, fs, order, rp
         )  # Design Chebyshev Type I filter
         return lfilter(b, a, data)  # Apply Chebyshev Type I filter
     elif filter_type == "Chebyshev Type II Band-pass":
+        # Use the provided rs, or fall back to a default if not provided
+        rs = rs if rs is not None else 20
         b, a = cheby2_bandpass(
-            lowcut, highcut, fs, order
+            lowcut, highcut, fs, order, rs
         )  # Design Chebyshev Type II filter
         return lfilter(b, a, data)  # Apply Chebyshev Type II filter
     elif filter_type == "Elliptic Band-pass":
-        b, a = ellip_bandpass(lowcut, highcut, fs, order)  # Design elliptic filter
+        # Use the provided rp and rs, or fall back to defaults if not provided
+        rp = rp if rp is not None else 0.5
+        rs = rs if rs is not None else 20
+        b, a = ellip_bandpass(
+            lowcut, highcut, fs, order, rp, rs
+        )  # Design elliptic filter
         return lfilter(b, a, data)  # Apply elliptic filter
     elif filter_type == "Bessel Band-pass":
         b, a = bessel_bandpass(lowcut, highcut, fs, order)  # Design Bessel filter
@@ -307,6 +328,127 @@ def apply_text_effects():
     - List of path_effects for text styling.
     """
     return [path_effects.Stroke(linewidth=3, foreground="white"), path_effects.Normal()]
+
+
+def filter_customization_panel(
+    audio_data,
+    lowcut,
+    highcut,
+    sr,
+    filter_type,
+    default_order=5,
+    default_rp=0.5,
+    default_rs=20,
+):
+    """
+    Create an interactive filter customization panel where users can modify filter parameters and visualize the result.
+
+    Parameters:
+    - audio_data: Input audio signal.
+    - lowcut: Low cutoff frequency.
+    - highcut: High cutoff frequency.
+    - sr: Sampling rate.
+    - filter_type: Type of filter (e.g., Butterworth, Chebyshev, Elliptic).
+    - default_order: Default filter order.
+    - default_rp: Default passband ripple (for Chebyshev I and Elliptic filters).
+    - default_rs: Default stopband ripple (for Chebyshev II and Elliptic filters).
+
+    Returns:
+    - filter_order: The selected filter order.
+    - rp: The passband ripple value (if applicable).
+    - rs: The stopband ripple value (if applicable).
+    """
+
+    # General Filter Customization Controls
+    st.write("**Filter Customization**")
+
+    # Slider for Filter Order (applies to most filters), with a unique key
+    filter_order = st.slider(
+        "Filter Order",
+        min_value=1,
+        max_value=10,
+        value=default_order,
+        key="filter_order_slider",
+    )
+
+    # Additional controls for ripple parameters (for Chebyshev I, II and Elliptic filters), with unique keys
+    if filter_type in ["Chebyshev Type I Band-pass", "Elliptic Band-pass"]:
+        rp = st.slider(
+            "Passband Ripple (dB)",
+            min_value=0.1,
+            max_value=5.0,
+            value=default_rp,
+            step=0.1,
+            key="passband_ripple_slider",
+        )
+    else:
+        rp = None
+
+    if filter_type in ["Chebyshev Type II Band-pass", "Elliptic Band-pass"]:
+        rs = st.slider(
+            "Stopband Ripple (dB)",
+            min_value=5,
+            max_value=40,
+            value=default_rs,
+            step=1,
+            key="stopband_ripple_slider",
+        )
+    else:
+        rs = None
+
+    # Apply the filter with customized parameters
+    if filter_type == "Butterworth Band-pass":
+        b, a = butter_bandpass(lowcut, highcut, sr, filter_order)
+    elif filter_type == "FIR Band-pass":
+        b, a = fir_bandpass(lowcut, highcut, sr), 1.0
+    elif filter_type == "IIR Band-pass":
+        b, a = iir_bandpass(lowcut, highcut, sr, filter_order)
+    elif filter_type == "Chebyshev Type I Band-pass":
+        b, a = cheby1_bandpass(lowcut, highcut, sr, filter_order, rp)
+    elif filter_type == "Chebyshev Type II Band-pass":
+        b, a = cheby2_bandpass(lowcut, highcut, sr, filter_order, rs)
+    elif filter_type == "Elliptic Band-pass":
+        b, a = ellip_bandpass(lowcut, highcut, sr, filter_order, rp, rs)
+    elif filter_type == "Bessel Band-pass":
+        b, a = bessel_bandpass(lowcut, highcut, sr, filter_order)
+
+    # Plot the frequency response of the customized filter
+    w, h = freqz(b, a, worN=2000)
+    freqs = (sr * 0.5 / np.pi) * w
+
+    # Apply a small epsilon to avoid log of zero
+    epsilon = 1e-10
+    gain = 20 * np.log10(np.abs(h) + epsilon)  # Avoid log(0) by adding epsilon
+
+    # Prepare the data for plotting
+    df = pd.DataFrame({"Frequency (Hz)": freqs, "Gain (dB)": gain})
+
+    # Create an Altair plot for the filter response
+    chart = (
+        alt.Chart(df)
+        .mark_line(opacity=0.7, color=primary_color)
+        .encode(
+            x=alt.X(
+                "Frequency (Hz)",
+                title="Frequency (Hz)",
+                scale=alt.Scale(domain=[0, sr / 2]),
+            ),
+            y=alt.Y("Gain (dB)", title="Gain (dB)", scale=alt.Scale(domain=[-60, 5])),
+            color=alt.value(tertiary_color),
+            tooltip=["Frequency (Hz)", "Gain (dB)"],
+        )
+        .properties(
+            title=f"{filter_type} - Frequency Response (Order: {filter_order})",
+            width=600,
+            autosize=alt.AutoSizeParams(type="fit", contains="padding"),
+        )
+        .interactive()
+    )
+
+    st.altair_chart(chart, use_container_width=True)
+
+    # Return the necessary parameters
+    return filter_order, rp, rs
 
 
 def plot_time_domain(
@@ -520,54 +662,85 @@ def plot_frequency_domain(
 
 
 @st.cache_data
-def plot_filter_response(lowcut, highcut, sr, filter_type, order=5):
+def plot_filter_response(lowcut, highcut, sr, filter_type=None, filters=None, order=5):
     """
-    Plot the frequency response of the selected filter.
+    Plot the frequency response for multiple filters, allowing for comparison of different filter types.
 
     Parameters:
     - lowcut: Low cutoff frequency.
     - highcut: High cutoff frequency.
     - sr: Sampling rate.
-    - filter_type: Type of filter applied.
-    - order: Filter order (for IIR filters).
+    - filter_type: Single filter type to plot if filters list is not provided.
+    - filters: List of filter types to plot if multiple filters are to be compared.
+    - order: Filter order (applicable to IIR filters).
+
+    Returns:
+    - None: Displays an interactive Altair plot of the frequency responses.
     """
-    if filter_type == "Butterworth Band-pass":
-        b, a = butter_bandpass(lowcut, highcut, sr, order)
-    elif filter_type == "FIR Band-pass":
-        taps = fir_bandpass(lowcut, highcut, sr)
-        b, a = taps, 1.0
-    elif filter_type == "IIR Band-pass":
-        b, a = iir_bandpass(lowcut, highcut, sr, order)
-    elif filter_type == "Chebyshev Type I Band-pass":
-        b, a = cheby1_bandpass(lowcut, highcut, sr, order)
-    elif filter_type == "Chebyshev Type II Band-pass":
-        b, a = cheby2_bandpass(lowcut, highcut, sr, order)
-    elif filter_type == "Elliptic Band-pass":
-        b, a = ellip_bandpass(lowcut, highcut, sr, order)
-    elif filter_type == "Bessel Band-pass":
-        b, a = bessel_bandpass(lowcut, highcut, sr, order)
 
-    # Frequency response calculation
-    w, h = freqz(b, a, worN=2000)
-    df = pd.DataFrame({"Frequency (Hz)": (sr * 0.5 / np.pi) * w, "Gain": abs(h)})
+    # Function to compute the frequency response of the selected filter
+    def get_filter_response(filter_type, lowcut, highcut, sr, order):
+        if filter_type == "Butterworth Band-pass":
+            b, a = butter_bandpass(lowcut, highcut, sr, order)
+        elif filter_type == "FIR Band-pass":
+            taps = fir_bandpass(lowcut, highcut, sr)
+            b, a = taps, 1.0
+        elif filter_type == "IIR Band-pass":
+            b, a = iir_bandpass(lowcut, highcut, sr, order)
+        elif filter_type == "Chebyshev Type I Band-pass":
+            b, a = cheby1_bandpass(lowcut, highcut, sr, order)
+        elif filter_type == "Chebyshev Type II Band-pass":
+            b, a = cheby2_bandpass(lowcut, highcut, sr, order)
+        elif filter_type == "Elliptic Band-pass":
+            b, a = ellip_bandpass(lowcut, highcut, sr, order)
+        elif filter_type == "Bessel Band-pass":
+            b, a = bessel_bandpass(lowcut, highcut, sr, order)
+        # Calculate the frequency response (w = frequencies, h = frequency response values)
+        return freqz(b, a, worN=2000)
 
-    # Plot the frequency response
+    # If no list of filters is provided, use the single filter type
+    if filters is None:
+        filters = [filter_type]
+
+    combined_df = pd.DataFrame()  # DataFrame to store all the filter responses
+
+    # Loop over each filter type in the list and compute its frequency response
+    for filt in filters:
+        w, h = get_filter_response(filt, lowcut, highcut, sr, order)
+        # Create a DataFrame to store frequency and gain for the current filter
+        df = pd.DataFrame(
+            {"Frequency (Hz)": (sr * 0.5 / np.pi) * w, "Gain": abs(h), "Filter": filt}
+        )
+        # Append the current filter's response to the combined DataFrame
+        combined_df = pd.concat([combined_df, df])
+
+    # Plot the frequency response using Altair
     chart = (
-        alt.Chart(df)
-        .mark_line(opacity=0.5, color=primary_color)
+        alt.Chart(combined_df)
+        .mark_line(opacity=0.5)  # Set opacity for the lines
         .encode(
-            x=alt.X("Frequency (Hz)", scale=alt.Scale(domain=(0, sr / 2))),
-            y=alt.Y("Gain", title="Gain"),
-            tooltip=["Frequency (Hz)", "Gain"],
+            x=alt.X(
+                "Frequency (Hz)", scale=alt.Scale(domain=(0, sr / 2))
+            ),  # X-axis represents frequency
+            y=alt.Y("Gain", title="Gain"),  # Y-axis represents gain
+            color="Filter",  # Color by filter type
+            tooltip=[
+                "Frequency (Hz)",
+                "Gain",
+                "Filter",
+            ],  # Show tooltips for data points
         )
         .properties(
-            title=f"{filter_type} Frequency Response",
-            width=500,
-            autosize=alt.AutoSizeParams(type="fit", contains="padding"),
+            title="Frequency Response",  # Title of the plot
+            width=500,  # Set plot width
+            autosize=alt.AutoSizeParams(
+                type="fit", contains="padding"
+            ),  # Auto-size to fit
         )
-        .interactive()
+        .interactive()  # Enable interactive features
     )
 
+    # Display the Altair chart in Streamlit
     st.altair_chart(chart, use_container_width=True)
 
 
@@ -583,151 +756,217 @@ def plot_spectral_centroid(audio_data, sr):
     Returns:
     - None: Displays an interactive Altair plot of the spectral centroid.
     """
-    # Compute the spectral centroid
+
+    # Compute the spectral centroid of the audio signal
     spectral_centroid = librosa.feature.spectral_centroid(y=audio_data, sr=sr)[0]
 
-    # Convert the frames to time
+    # Convert the frames to time for plotting
     frames = range(len(spectral_centroid))
     t = librosa.frames_to_time(frames)
 
     # Prepare the data for plotting
     df = pd.DataFrame({"Time (s)": t, "Spectral Centroid (Hz)": spectral_centroid})
 
-    # Create an Altair line chart
+    # Create an Altair line chart to plot the spectral centroid over time
     chart = (
         alt.Chart(df)
-        .mark_line(opacity=0.5, color=primary_color)
+        .mark_line(opacity=0.5, color=primary_color)  # Set the color and opacity
         .encode(
-            x=alt.X("Time (s)", title="Time (s)"),
-            y=alt.Y("Spectral Centroid (Hz)", title="Spectral Centroid (Hz)"),
-            tooltip=["Time (s)", "Spectral Centroid (Hz)"],
+            x=alt.X("Time (s)", title="Time (s)"),  # X-axis represents time
+            y=alt.Y(
+                "Spectral Centroid (Hz)", title="Spectral Centroid (Hz)"
+            ),  # Y-axis represents spectral centroid
+            tooltip=["Time (s)", "Spectral Centroid (Hz)"],  # Tooltips for the plot
         )
         .properties(
-            title="Spectral Centroid Over Time",
-            width=500,
-            autosize=alt.AutoSizeParams(type="fit", contains="padding"),
+            title="Spectral Centroid Over Time",  # Title of the plot
+            width=500,  # Set plot width
+            autosize=alt.AutoSizeParams(
+                type="fit", contains="padding"
+            ),  # Auto-size to fit
         )
-        .interactive()
+        .interactive()  # Enable interactivity for the plot
     )
 
-    # Display the chart
+    # Display the chart in Streamlit
     st.altair_chart(chart, use_container_width=True)
 
 
 @st.cache_data
-def plot_phase_response(lowcut, highcut, sr, filter_type, order=5):
+def plot_phase_response(lowcut, highcut, sr, filter_type=None, filters=None, order=5):
     """
-    Plot the phase response of the selected filter.
+    Plot the phase response for multiple filters, allowing for comparison of different filter types.
 
     Parameters:
     - lowcut: Low cutoff frequency.
     - highcut: High cutoff frequency.
     - sr: Sampling rate.
-    - filter_type: Type of filter applied.
-    - order: Filter order (for IIR filters).
+    - filter_type: Single filter type to plot if filters list is not provided.
+    - filters: List of filter types to plot if multiple filters are to be compared.
+    - order: Filter order (applicable to IIR filters).
+
+    Returns:
+    - None: Displays an interactive Altair plot of the phase responses.
     """
-    if filter_type == "Butterworth Band-pass":
-        b, a = butter_bandpass(lowcut, highcut, sr, order)
-    elif filter_type == "FIR Band-pass":
-        taps = fir_bandpass(lowcut, highcut, sr)
-        b, a = taps, 1.0
-    elif filter_type == "IIR Band-pass":
-        b, a = iir_bandpass(lowcut, highcut, sr, order)
-    elif filter_type == "Chebyshev Type I Band-pass":
-        b, a = cheby1_bandpass(lowcut, highcut, sr, order)
-    elif filter_type == "Chebyshev Type II Band-pass":
-        b, a = cheby2_bandpass(lowcut, highcut, sr, order)
-    elif filter_type == "Elliptic Band-pass":
-        b, a = ellip_bandpass(lowcut, highcut, sr, order)
-    elif filter_type == "Bessel Band-pass":
-        b, a = bessel_bandpass(lowcut, highcut, sr, order)
 
-    # Calculate frequency response and phase
-    w, h = freqz(b, a, worN=2000)
-    phase = np.angle(h)
+    # Function to compute the phase response of the selected filter
+    def get_phase_response(filter_type, lowcut, highcut, sr, order):
+        if filter_type == "Butterworth Band-pass":
+            b, a = butter_bandpass(lowcut, highcut, sr, order)
+        elif filter_type == "FIR Band-pass":
+            taps = fir_bandpass(lowcut, highcut, sr)
+            b, a = taps, 1.0
+        elif filter_type == "IIR Band-pass":
+            b, a = iir_bandpass(lowcut, highcut, sr, order)
+        elif filter_type == "Chebyshev Type I Band-pass":
+            b, a = cheby1_bandpass(lowcut, highcut, sr, order)
+        elif filter_type == "Chebyshev Type II Band-pass":
+            b, a = cheby2_bandpass(lowcut, highcut, sr, order)
+        elif filter_type == "Elliptic Band-pass":
+            b, a = ellip_bandpass(lowcut, highcut, sr, order)
+        elif filter_type == "Bessel Band-pass":
+            b, a = bessel_bandpass(lowcut, highcut, sr, order)
+        w, h = freqz(b, a, worN=2000)  # Get frequency and phase response
+        return w, np.angle(h)  # Return the frequencies and phase values
 
-    df = pd.DataFrame(
-        {"Frequency (Hz)": (sr * 0.5 / np.pi) * w, "Phase (radians)": phase}
-    )
+    # If no list of filters is provided, use the single filter type
+    if filters is None:
+        filters = [filter_type]
 
-    # Plot the phase response
+    combined_df = pd.DataFrame()  # DataFrame to store phase responses for all filters
+
+    # Loop over each filter type and compute its phase response
+    for filt in filters:
+        w, phase = get_phase_response(filt, lowcut, highcut, sr, order)
+        df = pd.DataFrame(
+            {
+                "Frequency (Hz)": (sr * 0.5 / np.pi) * w,  # Convert to Hz
+                "Phase (radians)": phase,  # Phase values in radians
+                "Filter": filt,  # Filter type
+            }
+        )
+        combined_df = pd.concat([combined_df, df])
+
+    # Plot the phase response using Altair
     chart = (
-        alt.Chart(df)
-        .mark_line(opacity=0.5, color=secondary_color)
+        alt.Chart(combined_df)
+        .mark_line(opacity=0.5)  # Set line opacity
         .encode(
-            x=alt.X("Frequency (Hz)", scale=alt.Scale(domain=(0, sr / 2))),
-            y=alt.Y("Phase (radians)", title="Phase (radians)"),
-            tooltip=["Frequency (Hz)", "Phase (radians)"],
+            x=alt.X(
+                "Frequency (Hz)", scale=alt.Scale(domain=(0, sr / 2))
+            ),  # X-axis represents frequency
+            y=alt.Y(
+                "Phase (radians)", title="Phase (radians)"
+            ),  # Y-axis represents phase
+            color="Filter",  # Color by filter type
+            tooltip=[
+                "Frequency (Hz)",
+                "Phase (radians)",
+                "Filter",
+            ],  # Tooltip for interactive plot
         )
         .properties(
-            title=f"{filter_type} Phase Response",
-            width=500,
-            autosize=alt.AutoSizeParams(type="fit", contains="padding"),
+            title="Phase Response",  # Title of the plot
+            width=500,  # Set plot width
+            autosize=alt.AutoSizeParams(
+                type="fit", contains="padding"
+            ),  # Auto-size to fit
         )
-        .interactive()
+        .interactive()  # Enable interactivity for the plot
     )
 
+    # Display the Altair chart in Streamlit
     st.altair_chart(chart, use_container_width=True)
 
 
 @st.cache_data
-def plot_group_delay(lowcut, highcut, sr, filter_type, order=5):
+def plot_group_delay(lowcut, highcut, sr, filter_type=None, filters=None, order=5):
     """
-    Plot the group delay of the selected filter.
+    Plot the group delay for multiple filters, allowing for comparison of different filter types.
 
     Parameters:
     - lowcut: Low cutoff frequency.
     - highcut: High cutoff frequency.
     - sr: Sampling rate.
-    - filter_type: Type of filter applied.
-    - order: Filter order (for IIR filters).
+    - filter_type: Single filter type to plot if filters list is not provided.
+    - filters: List of filter types to plot if multiple filters are to be compared.
+    - order: Filter order (applicable to IIR filters).
+
+    Returns:
+    - None: Displays an interactive Altair plot of the group delays.
     """
-    if filter_type == "Butterworth Band-pass":
-        b, a = butter_bandpass(lowcut, highcut, sr, order)
-    elif filter_type == "FIR Band-pass":
-        taps = fir_bandpass(lowcut, highcut, sr)
-        b, a = taps, 1.0
-    elif filter_type == "IIR Band-pass":
-        b, a = iir_bandpass(lowcut, highcut, sr, order)
-    elif filter_type == "Chebyshev Type I Band-pass":
-        b, a = cheby1_bandpass(lowcut, highcut, sr, order)
-    elif filter_type == "Chebyshev Type II Band-pass":
-        b, a = cheby2_bandpass(lowcut, highcut, sr, order)
-    elif filter_type == "Elliptic Band-pass":
-        b, a = ellip_bandpass(lowcut, highcut, sr, order)
-    elif filter_type == "Bessel Band-pass":
-        b, a = bessel_bandpass(lowcut, highcut, sr, order)
 
-    # Calculate group delay
-    w, h = freqz(b, a, worN=2000)
-    unwrapped_phase = np.unwrap(np.angle(h))
-    group_delay = -np.diff(unwrapped_phase) / np.diff(w)
+    # Function to compute the group delay of the selected filter
+    def get_group_delay(filter_type, lowcut, highcut, sr, order):
+        if filter_type == "Butterworth Band-pass":
+            b, a = butter_bandpass(lowcut, highcut, sr, order)
+        elif filter_type == "FIR Band-pass":
+            taps = fir_bandpass(lowcut, highcut, sr)
+            b, a = taps, 1.0
+        elif filter_type == "IIR Band-pass":
+            b, a = iir_bandpass(lowcut, highcut, sr, order)
+        elif filter_type == "Chebyshev Type I Band-pass":
+            b, a = cheby1_bandpass(lowcut, highcut, sr, order)
+        elif filter_type == "Chebyshev Type II Band-pass":
+            b, a = cheby2_bandpass(lowcut, highcut, sr, order)
+        elif filter_type == "Elliptic Band-pass":
+            b, a = ellip_bandpass(lowcut, highcut, sr, order)
+        elif filter_type == "Bessel Band-pass":
+            b, a = bessel_bandpass(lowcut, highcut, sr, order)
+        w, h = freqz(b, a, worN=2000)  # Get the frequency and phase response
+        unwrapped_phase = np.unwrap(
+            np.angle(h)
+        )  # Unwrap phase to avoid discontinuities
+        group_delay = -np.diff(unwrapped_phase) / np.diff(w)  # Calculate group delay
+        return w[1:], group_delay  # Ignore the first frequency bin
 
-    df = pd.DataFrame(
-        {
-            "Frequency (Hz)": (sr * 0.5 / np.pi)
-            * w[1:],  # Ignore first frequency bin (undefined group delay)
-            "Group Delay (samples)": group_delay,
-        }
-    )
+    # If no list of filters is provided, use the single filter type
+    if filters is None:
+        filters = [filter_type]
 
-    # Plot group delay
+    combined_df = pd.DataFrame()  # DataFrame to store group delays for all filters
+
+    # Loop over each filter type and compute its group delay
+    for filt in filters:
+        w, group_delay = get_group_delay(filt, lowcut, highcut, sr, order)
+        df = pd.DataFrame(
+            {
+                "Frequency (Hz)": (sr * 0.5 / np.pi) * w,  # Convert to Hz
+                "Group Delay (samples)": group_delay,  # Group delay values in samples
+                "Filter": filt,  # Filter type
+            }
+        )
+        combined_df = pd.concat([combined_df, df])
+
+    # Plot the group delay using Altair
     chart = (
-        alt.Chart(df)
-        .mark_line(opacity=0.5, color=tertiary_color)
+        alt.Chart(combined_df)
+        .mark_line(opacity=0.5)  # Set line opacity
         .encode(
-            x=alt.X("Frequency (Hz)", scale=alt.Scale(domain=(0, sr / 2))),
-            y=alt.Y("Group Delay (samples)", title="Group Delay (samples)"),
-            tooltip=["Frequency (Hz)", "Group Delay (samples)"],
+            x=alt.X(
+                "Frequency (Hz)", scale=alt.Scale(domain=(0, sr / 2))
+            ),  # X-axis represents frequency
+            y=alt.Y(
+                "Group Delay (samples)", title="Group Delay (samples)"
+            ),  # Y-axis represents group delay
+            color="Filter",  # Color by filter type
+            tooltip=[
+                "Frequency (Hz)",
+                "Group Delay (samples)",
+                "Filter",
+            ],  # Tooltip for interactive plot
         )
         .properties(
-            title=f"{filter_type} Group Delay",
-            width=500,
-            autosize=alt.AutoSizeParams(type="fit", contains="padding"),
+            title="Group Delay",  # Title of the plot
+            width=500,  # Set plot width
+            autosize=alt.AutoSizeParams(
+                type="fit", contains="padding"
+            ),  # Auto-size to fit
         )
-        .interactive()
+        .interactive()  # Enable interactivity for the plot
     )
 
+    # Display the Altair chart in Streamlit
     st.altair_chart(chart, use_container_width=True)
 
 
@@ -743,8 +982,23 @@ def calculate_snr(original_audio, cleaned_audio):
     Returns:
     - snr: Calculated SNR in decibels (dB).
     """
-    signal_power = np.mean(np.square(original_audio))
-    noise_power = np.mean(np.square(original_audio - cleaned_audio))
+
+    # Ensure both arrays are of float64 type to avoid overflow issues
+    original_audio = original_audio.astype(np.float64)
+    cleaned_audio = cleaned_audio.astype(np.float64)
+
+    # Clip extreme differences to prevent overflow during squaring
+    diff = np.clip(original_audio - cleaned_audio, -1e6, 1e6)
+
+    # Calculate the power of the original and noise signals
+    signal_power = np.mean(np.square(original_audio))  # Power of the original signal
+    noise_power = np.mean(np.square(diff))  # Power of the noise signal
+
+    # Avoid divide-by-zero errors
+    if noise_power == 0:
+        return np.inf  # Infinite SNR if there's no noise
+
+    # Calculate SNR in decibels (dB)
     snr = 10 * np.log10(signal_power / noise_power)
     return snr
 
@@ -759,45 +1013,235 @@ def plot_snr_vs_frequency(original_audio, cleaned_audio, sr, max_points=5000):
     - cleaned_audio: Cleaned audio signal after noise cancellation.
     - sr: Sampling rate.
     - max_points: Maximum number of points to plot.
+
+    Returns:
+    - None: Displays an interactive Altair plot of the SNR across frequency.
     """
+
+    # Perform FFT on the original and cleaned audio signals
     original_fft = np.fft.fft(original_audio)
     cleaned_fft = np.fft.fft(cleaned_audio)
-    freqs = np.fft.fftfreq(len(original_fft), 1 / sr)
+    freqs = np.fft.fftfreq(len(original_fft), 1 / sr)  # Get the frequencies
 
-    # Positive frequencies
+    # Extract positive frequencies and their magnitudes
     positive_freqs = freqs[: len(freqs) // 2]
     original_magnitude = np.abs(original_fft[: len(freqs) // 2])
     cleaned_magnitude = np.abs(cleaned_fft[: len(freqs) // 2])
 
-    # Calculate SNR in the frequency domain
+    # Calculate the SNR in the frequency domain
     snr_values = 10 * np.log10(
         (original_magnitude**2)
         / (np.abs(original_magnitude - cleaned_magnitude) ** 2 + 1e-10)
     )
 
-    # Downsample for plot clarity
+    # Downsample the data for better plotting performance
     step = max(1, len(positive_freqs) // max_points)
     freqs_downsampled = positive_freqs[::step]
     snr_downsampled = snr_values[::step]
 
+    # Prepare the data for plotting
     df = pd.DataFrame(
         {"Frequency (Hz)": freqs_downsampled, "SNR (dB)": snr_downsampled}
     )
 
-    # Plot the SNR vs frequency
+    # Plot the SNR vs frequency using Altair
     chart = (
         alt.Chart(df)
-        .mark_line(opacity=0.7, color=tertiary_color)
+        .mark_line(opacity=0.7, color=tertiary_color)  # Set line opacity and color
         .encode(
             x=alt.X(
                 "Frequency (Hz)",
-                scale=alt.Scale(type="log", domain=[1, sr / 2]),
+                scale=alt.Scale(
+                    type="log", domain=[1, sr / 2]
+                ),  # Logarithmic scale for frequency
                 title="Frequency (Hz, log scale)",
             ),
-            y=alt.Y("SNR (dB)", title="SNR (dB)"),
-            tooltip=["Frequency (Hz)", "SNR (dB)"],
+            y=alt.Y("SNR (dB)", title="SNR (dB)"),  # Y-axis represents SNR
+            tooltip=["Frequency (Hz)", "SNR (dB)"],  # Tooltip for interactive plot
         )
-        .properties(title="SNR vs Frequency", width=500)
+        .properties(title="SNR vs Frequency", width=500)  # Set plot title and width
+        .interactive()  # Enable interactivity for the plot
+    )
+
+    # Display the Altair chart in Streamlit
+    st.altair_chart(chart, use_container_width=True)
+
+
+@st.cache_data
+def plot_impulse_response(lowcut, highcut, sr, filter_type=None, filters=None, order=5):
+    """
+    Plot the impulse response for multiple filters, allowing for comparison of different filter types.
+
+    Parameters:
+    - lowcut: Low cutoff frequency.
+    - highcut: High cutoff frequency.
+    - sr: Sampling rate.
+    - filter_type: Single filter type to plot if filters list is not provided.
+    - filters: List of filter types to plot if multiple filters are to be compared.
+    - order: Filter order (applicable to IIR filters).
+
+    Returns:
+    - None: Displays an interactive Altair plot of the impulse responses.
+    """
+
+    # Function to compute the filtered impulse response of the selected filter
+    def get_filtered_impulse(filter_type, lowcut, highcut, sr, order):
+        impulse = np.zeros(100)  # Create an impulse signal
+        impulse[0] = 1  # Set the first sample to 1 (impulse)
+        return apply_filter(impulse, lowcut, highcut, sr, filter_type, order)
+
+    # If no list of filters is provided, use the single filter type
+    if filters is None:
+        filters = [filter_type]
+
+    combined_df = pd.DataFrame()  # DataFrame to store impulse responses for all filters
+    time = np.arange(0, 100) / sr  # Generate time values for the impulse response
+
+    # Loop over each filter type and compute its impulse response
+    for filt in filters:
+        filtered_impulse = get_filtered_impulse(filt, lowcut, highcut, sr, order)
+        df = pd.DataFrame(
+            {
+                "Time (s)": time,  # Time axis
+                "Filtered Impulse Response": filtered_impulse,  # Amplitude of the impulse response
+                "Filter": filt,  # Filter type
+            }
+        )
+        combined_df = pd.concat([combined_df, df])
+
+    # Plot the impulse response using Altair
+    chart = (
+        alt.Chart(combined_df)
+        .mark_line(opacity=0.5)  # Set line opacity
+        .encode(
+            x=alt.X("Time (s)", title="Time (s)"),  # X-axis represents time
+            y=alt.Y(
+                "Filtered Impulse Response", title="Amplitude"
+            ),  # Y-axis represents amplitude
+            color="Filter",  # Color by filter type
+            tooltip=[
+                "Time (s)",
+                "Filtered Impulse Response",
+                "Filter",
+            ],  # Tooltip for interactive plot
+        )
+        .properties(title="Impulse Response", width=500)  # Set plot title and width
+        .interactive()  # Enable interactivity for the plot
+    )
+
+    # Display the Altair chart in Streamlit
+    st.altair_chart(chart, use_container_width=True)
+
+
+@st.cache_data
+def plot_step_response(lowcut, highcut, sr, filter_type=None, filters=None, order=5):
+    """
+    Plot the step response for multiple filters, allowing for comparison of different filter types.
+
+    Parameters:
+    - lowcut: Low cutoff frequency.
+    - highcut: High cutoff frequency.
+    - sr: Sampling rate.
+    - filter_type: Single filter type to plot if filters list is not provided.
+    - filters: List of filter types to plot if multiple filters are to be compared.
+    - order: Filter order (applicable to IIR filters).
+
+    Returns:
+    - None: Displays an interactive Altair plot of the step responses.
+    """
+
+    # Function to compute the filtered step response of the selected filter
+    def get_filtered_step(filter_type, lowcut, highcut, sr, order):
+        step_signal = np.ones(100)  # Create a step signal (all ones)
+        return apply_filter(step_signal, lowcut, highcut, sr, filter_type, order)
+
+    # If no list of filters is provided, use the single filter type
+    if filters is None:
+        filters = [filter_type]
+
+    combined_df = pd.DataFrame()  # DataFrame to store step responses for all filters
+    time = np.arange(0, 100) / sr  # Generate time values for the step response
+
+    # Loop over each filter type and compute its step response
+    for filt in filters:
+        filtered_step = get_filtered_step(filt, lowcut, highcut, sr, order)
+        df = pd.DataFrame(
+            {"Time (s)": time, "Filtered Step Response": filtered_step, "Filter": filt}
+        )
+        combined_df = pd.concat([combined_df, df])
+
+    # Plot the step response using Altair
+    chart = (
+        alt.Chart(combined_df)
+        .mark_line(opacity=0.5)  # Set line opacity
+        .encode(
+            x=alt.X("Time (s)", title="Time (s)"),  # X-axis represents time
+            y=alt.Y(
+                "Filtered Step Response", title="Amplitude"
+            ),  # Y-axis represents amplitude
+            color="Filter",  # Color by filter type
+            tooltip=[
+                "Time (s)",
+                "Filtered Step Response",
+                "Filter",
+            ],  # Tooltip for interactive plot
+        )
+        .properties(title="Step Response", width=500)  # Set plot title and width
+        .interactive()  # Enable interactivity for the plot
+    )
+
+    # Display the Altair chart in Streamlit
+    st.altair_chart(chart, use_container_width=True)
+
+
+@st.cache_data
+def plot_time_domain_comparison(
+    audio_data, lowcut, highcut, sr, filters, order=5, max_points=5000
+):
+    """
+    Plot the time-domain comparison of multiple filtered signals with downsampling to avoid large data sizes.
+
+    Parameters:
+    - audio_data: Input audio signal.
+    - lowcut: Low cutoff frequency.
+    - highcut: High cutoff frequency.
+    - sr: Sampling rate.
+    - filters: List of filter types to compare.
+    - order: Filter order (applicable to IIR filters).
+    - max_points: Maximum number of points to plot (downsampling to prevent large data).
+    """
+    time = np.linspace(0, len(audio_data) / sr, len(audio_data))
+
+    # Downsample the time-domain signal to reduce data size
+    step = max(1, len(audio_data) // max_points)
+    time_downsampled = time[::step]
+
+    combined_df = pd.DataFrame({"Time (s)": time_downsampled})
+
+    # Loop through each filter type and apply the filter
+    for filt in filters:
+        filtered_signal = apply_filter(audio_data, lowcut, highcut, sr, filt, order)
+        filtered_downsampled = filtered_signal[::step]
+        combined_df[filt] = filtered_downsampled
+
+    # Melt the DataFrame for plotting
+    df_melted = combined_df.melt("Time (s)", var_name="Filter", value_name="Amplitude")
+
+    # Create an Altair line chart to plot the time-domain comparison
+    chart = (
+        alt.Chart(df_melted)
+        .mark_line(opacity=0.5)
+        .encode(
+            x=alt.X("Time (s)", title="Time (s)"),
+            y=alt.Y("Amplitude", title="Amplitude"),
+            color="Filter",
+            tooltip=["Time (s)", "Amplitude", "Filter"],
+        )
+        .properties(
+            title="Time-Domain Comparison of Filters",
+            width=500,
+            autosize=alt.AutoSizeParams(type="fit", contains="padding"),
+        )
         .interactive()
     )
 
@@ -805,82 +1249,80 @@ def plot_snr_vs_frequency(original_audio, cleaned_audio, sr, max_points=5000):
 
 
 @st.cache_data
-def plot_impulse_response(lowcut, highcut, sr, filter_type, order=5):
+def plot_poles_zeros(filter_type, lowcut, highcut, sr, order=5):
     """
-    Plot the impulse response of the selected filter.
+    Plot the poles and zeros of the designed filter in the z-plane for filter stability analysis.
 
     Parameters:
+    - filter_type: Type of filter to analyze (e.g., Butterworth, Chebyshev, etc.).
     - lowcut: Low cutoff frequency.
     - highcut: High cutoff frequency.
     - sr: Sampling rate.
-    - filter_type: Type of filter applied.
     - order: Filter order (for IIR filters).
+
+    Returns:
+    - None: Displays the poles and zeros plot in Streamlit.
     """
-    # Create a short impulse signal (delta function)
-    impulse = np.zeros(100)
-    impulse[0] = 1  # Set first value to 1, representing the impulse
+    # Get the filter coefficients based on the filter type
+    if filter_type == "Butterworth Band-pass":
+        b, a = butter_bandpass(lowcut, highcut, sr, order)
+    elif filter_type == "FIR Band-pass":
+        b, a = fir_bandpass(lowcut, highcut, sr), 1.0
+    elif filter_type == "IIR Band-pass":
+        b, a = iir_bandpass(lowcut, highcut, sr, order)
+    elif filter_type == "Chebyshev Type I Band-pass":
+        b, a = cheby1_bandpass(lowcut, highcut, sr, order)
+    elif filter_type == "Chebyshev Type II Band-pass":
+        b, a = cheby2_bandpass(lowcut, highcut, sr, order)
+    elif filter_type == "Elliptic Band-pass":
+        b, a = ellip_bandpass(lowcut, highcut, sr, order)
+    elif filter_type == "Bessel Band-pass":
+        b, a = bessel_bandpass(lowcut, highcut, sr, order)
 
-    # Apply the filter to the impulse signal
-    filtered_impulse = apply_filter(impulse, lowcut, highcut, sr, filter_type, order)
+    # Calculate poles and zeros
+    z, p, k = signal.tf2zpk(b, a)
 
-    # Time axis for plotting
-    time = np.arange(0, len(impulse)) / sr
+    # Convert to real and imaginary components
+    zeros_real, zeros_imag = np.real(z), np.imag(z)
+    poles_real, poles_imag = np.real(p), np.imag(p)
 
-    # Plot the impulse response
-    df = pd.DataFrame({"Time (s)": time, "Filtered Impulse Response": filtered_impulse})
+    # Create DataFrames for poles and zeros
+    df_zeros = pd.DataFrame(
+        {"Real": zeros_real, "Imaginary": zeros_imag, "Type": "Zero"}
+    )
+    df_poles = pd.DataFrame(
+        {"Real": poles_real, "Imaginary": poles_imag, "Type": "Pole"}
+    )
+    df_combined = pd.concat([df_zeros, df_poles])
 
-    # Create the plot
+    # Create an Altair plot for poles and zeros
     chart = (
-        alt.Chart(df)
-        .mark_line(opacity=0.5)
+        alt.Chart(df_combined)
+        .mark_point(filled=True, size=100)
         .encode(
-            x=alt.X("Time (s)", title="Time (s)"),
-            y=alt.Y("Filtered Impulse Response", title="Amplitude"),
-            tooltip=["Time (s)", "Filtered Impulse Response"],
+            x=alt.X("Real", scale=alt.Scale(domain=(-2, 2)), title="Real"),
+            y=alt.Y("Imaginary", scale=alt.Scale(domain=(-2, 2)), title="Imaginary"),
+            shape="Type:N",
+            color="Type:N",
+            tooltip=["Real", "Imaginary", "Type"],
         )
-        .properties(title=f"{filter_type} Impulse Response", width=500)
-        .interactive()
+        .properties(
+            title=f"Filter Design (Poles and Zeros): {filter_type}",
+            width=400,
+            height=400,
+        )
     )
 
-    st.altair_chart(chart, use_container_width=True)
-
-
-@st.cache_data
-def plot_step_response(lowcut, highcut, sr, filter_type, order=5):
-    """
-    Plot the step response of the selected filter.
-
-    Parameters:
-    - lowcut: Low cutoff frequency.
-    - highcut: High cutoff frequency.
-    - sr: Sampling rate.
-    - filter_type: Type of filter applied.
-    - order: Filter order (for IIR filters).
-    """
-    # Create a step signal (all ones after the initial point)
-    step_signal = np.ones(100)
-
-    # Apply the filter to the step signal
-    filtered_step = apply_filter(step_signal, lowcut, highcut, sr, filter_type, order)
-
-    # Time axis for plotting
-    time = np.arange(0, len(step_signal)) / sr
-
-    # Plot the step response
-    df = pd.DataFrame({"Time (s)": time, "Filtered Step Response": filtered_step})
-
-    # Create the plot
-    chart = (
-        alt.Chart(df)
-        .mark_line(opacity=0.5)
-        .encode(
-            x=alt.X("Time (s)", title="Time (s)"),
-            y=alt.Y("Filtered Step Response", title="Amplitude"),
-            tooltip=["Time (s)", "Filtered Step Response"],
-        )
-        .properties(title=f"{filter_type} Step Response", width=500)
-        .interactive()
+    # Add unit circle to the plot (for z-plane)
+    unit_circle = (
+        alt.Chart(pd.DataFrame({"theta": np.linspace(0, 2 * np.pi, 500)}))
+        .transform_calculate("Real", "cos(datum.theta)")
+        .transform_calculate("Imaginary", "sin(datum.theta)")
+        .mark_line(strokeDash=[5, 5], color="black")
+        .encode(x="Real:Q", y="Imaginary:Q")
     )
+
+    chart = chart + unit_circle
 
     st.altair_chart(chart, use_container_width=True)
 
@@ -988,15 +1430,7 @@ if audio_file is not None and noisy_audio is not None:
         # Filter settings in a cleaner layout
         filter_type = st.selectbox(
             "Select Filter Type",
-            [
-                "Butterworth Band-pass",
-                "FIR Band-pass",
-                "IIR Band-pass",
-                "Chebyshev Type I Band-pass",
-                "Chebyshev Type II Band-pass",
-                "Elliptic Band-pass",
-                "Bessel Band-pass",
-            ],
+            all_filters,
         )
 
         col1, col2 = st.columns(2)
@@ -1007,9 +1441,15 @@ if audio_file is not None and noisy_audio is not None:
             "High Frequency Cutoff", 50, 8000, highcut_suggested, key="highcut_slider"
         )
 
+        filter_order, rp, rs = filter_customization_panel(
+            noisy_audio, lowcut, highcut, sr, filter_type
+        )
+
         # Apply the filter and display audio
         if lowcut > 0 and highcut > lowcut:
-            cleaned_audio = apply_filter(noisy_audio, lowcut, highcut, sr, filter_type)
+            cleaned_audio = apply_filter(
+                noisy_audio, lowcut, highcut, sr, filter_type, filter_order, rp, rs
+            )
 
             # Play the cleaned (filtered) audio for preview
             cleaned_audio_buffer = io.BytesIO()
@@ -1032,9 +1472,9 @@ if audio_file is not None and noisy_audio is not None:
 
         # Spectral centroid, filter response, and SNR comparison
         plot_spectral_centroid(audio_data, sr)
-        plot_filter_response(lowcut, highcut, sr, filter_type)
-        plot_phase_response(lowcut, highcut, sr, filter_type, order=5)
-        plot_group_delay(lowcut, highcut, sr, filter_type, order=5)
+        plot_filter_response(lowcut, highcut, sr, filter_type, order=filter_order)
+        plot_phase_response(lowcut, highcut, sr, filter_type, order=filter_order)
+        plot_group_delay(lowcut, highcut, sr, filter_type, order=filter_order)
 
         # Display SNR after filtering with a metric
         snr = calculate_snr(noisy_audio, cleaned_audio)
@@ -1044,7 +1484,53 @@ if audio_file is not None and noisy_audio is not None:
         plot_snr_vs_frequency(noisy_audio, cleaned_audio, sr)
 
         # Plot the impulse response of the filter
-        plot_impulse_response(lowcut, highcut, sr, filter_type)
+        plot_impulse_response(lowcut, highcut, sr, filter_type, order=filter_order)
 
         # Plot the step response of the filter
-        plot_step_response(lowcut, highcut, sr, filter_type)
+        plot_step_response(lowcut, highcut, sr, filter_type, order=filter_order)
+
+        # Filter design display (poles and zeros plot)
+        # st.write("**Filter Design: Poles and Zeros Plot**")
+        plot_poles_zeros(filter_type, lowcut, highcut, sr, order=filter_order)
+
+    with st.expander("5. Compare Filters", expanded=False):
+        st.write(
+            "Click the button below to compare the responses of different filters."
+        )
+        if st.button("Generate Comparison Plots"):
+            filters_to_compare = all_filters
+            # Spectral centroid, filter response, and SNR comparison
+            plot_filter_response(
+                lowcut, highcut, sr, filter_type, filters=filters_to_compare
+            )
+            plot_phase_response(
+                lowcut,
+                highcut,
+                sr,
+                filter_type,
+                filters=filters_to_compare,
+                order=filter_order,
+            )
+            plot_group_delay(
+                lowcut,
+                highcut,
+                sr,
+                filter_type,
+                filters=filters_to_compare,
+                order=filter_order,
+            )
+
+            # Plot the impulse response of the filter
+            plot_impulse_response(
+                lowcut, highcut, sr, filter_type, filters=filters_to_compare
+            )
+
+            # Plot the step response of the filter
+            plot_step_response(
+                lowcut, highcut, sr, filter_type, filters=filters_to_compare
+            )
+
+            # Time-domain comparison of filtered signals
+            plot_time_domain_comparison(
+                audio_data, lowcut, highcut, sr, filters_to_compare, order=filter_order
+            )
