@@ -9,6 +9,7 @@ let isSwiping = false;
 let swipeStartX = 0;
 let swipeStartY = 0;
 const swipeThreshold = 50; // Minimum distance in pixels to consider a swipe
+let current_volume = 20;
 
 const socket = io();
 const YOUTUBE_API_KEY = "AIzaSyC-x1733bNl22rbecjJe6CNHhW62lIx_js"; // Ensure this matches your backend
@@ -289,7 +290,9 @@ function onYouTubeIframeAPIReady() {
 }
 
 function onPlayerReady(event) {
-  socket.emit("request_current_video");
+  player.setVolume(current_volume); // Set YouTube player volume to initial value
+  document.getElementById("volume-slider").value = current_volume; // Update volume slider on UI
+  socket.emit("request_current_video"); // Sync initial video state, if needed
 }
 
 function onPlayerStateChange(event) {
@@ -342,6 +345,8 @@ function updateCurrentTitle(videoId) {
   if (currentItem) {
     const currentTitle = currentItem.querySelector(".video-info p").innerText;
     document.getElementById("current-title").innerText = currentTitle;
+  } else {
+    document.getElementById("current-title").innerText = "Now Playing: None";
   }
 }
 
@@ -397,17 +402,32 @@ document.getElementById("play-pause-btn").addEventListener("click", () => {
     if (player.getPlayerState() === YT.PlayerState.PLAYING) {
       player.pauseVideo();
       showNotification("Paused");
+      socket.emit("play_pause");
+      socket.emit("request_current_video"); // Request the current state for synchronization
     } else {
       player.playVideo();
       showNotification("Playing");
+      socket.emit("play_pause");
+      socket.emit("request_current_video"); // Request the current state for synchronization
     }
   } else {
     socket.emit("play_pause");
+    socket.emit("request_current_video"); // Request the current state for synchronization
   }
+});
+
+document.getElementById("shuffle-btn").addEventListener("click", () => {
+  socket.emit("shuffle_playlist");
+});
+
+socket.on("playlist_shuffled", () => {
+  showNotification("Playlist Shuffled");
 });
 
 document.getElementById("volume-slider").addEventListener("input", function () {
   const volume = this.value;
+  current_volume = volume; // Update global volume variable
+  player.setVolume(volume); // Set YouTube player volume
   socket.emit("change_volume", { volume });
   showVolumeOverlay(volume);
 });
