@@ -53,6 +53,20 @@ function fetchSuggestions(query) {
     });
 }
 
+function scrollToPlayingSong() {
+  if (currentVideoId) {
+    const currentVideoElement = document.querySelector(
+      `.video-item[data-video-id="${currentVideoId}"]`
+    );
+    if (currentVideoElement) {
+      currentVideoElement.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }
+  }
+}
+
 function showSuggestions(suggestions) {
   if (!suggestionOverlay) {
     suggestionOverlay = document.createElement("div");
@@ -149,6 +163,7 @@ socket.on("current_video", (data) => {
   updateCurrentTitle(currentVideoId);
   highlightCurrentVideo(currentVideoId);
   updatePlayPauseButton(data.state === "playing" ? "playing" : "paused");
+  scrollToPlayingSong();
 });
 
 // Update the player progress and handle seeking
@@ -228,29 +243,32 @@ window.addEventListener("load", () => {
 function addVideoToList(video) {
   const playlist = document.getElementById("playlist");
   const videoItem = document.createElement("div");
-  videoItem.className = "video-item";
+  videoItem.className = "video-item unselectable";
   videoItem.setAttribute("data-id", video.id);
   videoItem.setAttribute("data-video-id", video.video_id);
+  videoItem.setAttribute(
+    "data-url",
+    `https://www.youtube.com/watch?v=${video.video_id}`
+  );
   videoItem.innerHTML = `
-        <img class="drag-area" src="${video.thumbnail}" alt="${video.title}">
-        <div class="video-info">
-            <p class="video-title"><strong>${video.title}</strong></p>
-            <p class="video-meta">${
-              video.artist
-                ? "Artist: " + video.artist
-                : "Creator: " + video.creator
-            }</p>
-            ${
-              video.album
-                ? `<p class="video-meta">Album: ${video.album}</p>`
-                : ""
-            }
-            <p class="video-meta">Length: ${formatDuration(video.length)}</p>
-        </div>
-    `;
+      <img class="drag-area" src="${video.thumbnail}" alt="${video.title}">
+      <div class="video-info">
+          <p class="video-title"><strong>${video.title}</strong></p>
+          <p class="video-meta">${
+            video.artist
+              ? "Artist: " + video.artist
+              : "Creator: " + video.creator
+          }</p>
+          ${
+            video.album ? `<p class="video-meta">Album: ${video.album}</p>` : ""
+          }
+          <p class="video-meta">Length: ${formatDuration(video.length)}</p>
+      </div>
+  `;
   playlist.appendChild(videoItem);
   attachClickListener(videoItem);
   attachSwipeListener(videoItem);
+  attachLongPressListener(videoItem); // Add long-press listener
 }
 
 function updatePlaylist(videos) {
@@ -261,9 +279,45 @@ function updatePlaylist(videos) {
 }
 
 function attachClickListener(videoItem) {
+  let longPressTimer;
+
+  // Handle touchstart for mobile long-press
+  videoItem.addEventListener("touchstart", function (e) {
+    longPressTimer = setTimeout(() => {
+      e.preventDefault(); // Prevent default text selection
+      const videoId = videoItem.getAttribute("data-video-id");
+      const video = videoList.find((v) => v.video_id === videoId);
+      if (video) {
+        showContextMenu(
+          videoItem,
+          `https://www.youtube.com/watch?v=${video.video_id}`
+        );
+      }
+    }, 500); // Duration to trigger long-press
+  });
+
+  // Cancel the long-press if the touch ends or moves out of the card
+  videoItem.addEventListener("touchend", function () {
+    clearTimeout(longPressTimer);
+  });
+  videoItem.addEventListener("touchmove", function () {
+    clearTimeout(longPressTimer);
+  });
+
+  // Suppress the default context menu on right-click/long-press
+  videoItem.addEventListener("contextmenu", function (e) {
+    e.preventDefault();
+  });
+
+  // Regular click to play/pause or select a new video
   videoItem.addEventListener("click", function () {
     const videoId = videoItem.getAttribute("data-video-id");
-    socket.emit("play_video", { video_id: videoId });
+
+    if (videoId === currentVideoId) {
+      socket.emit("play_pause");
+    } else {
+      socket.emit("play_video", { video_id: videoId });
+    }
   });
 }
 
@@ -387,7 +441,8 @@ function highlightCurrentVideo(videoId) {
 }
 
 document.getElementById("play-pause-btn").addEventListener("click", () => {
-  socket.emit("play_pause");
+  socket.emit("play_pause"); // Toggle play/pause on the server
+  socket.emit("request_current_video"); // Request the current state for synchronization
 });
 
 document.getElementById("volume-slider").addEventListener("input", function () {
@@ -479,6 +534,14 @@ window.addEventListener("load", () => {
   socket.emit("request_current_video");
 });
 
+document.getElementById("shuffle-btn").addEventListener("click", () => {
+  socket.emit("shuffle_playlist");
+});
+
+socket.on("playlist_shuffled", () => {
+  showNotification("Playlist Shuffled");
+});
+
 function updateCurrentTitle(videoId) {
   const currentItem = Array.from(document.querySelectorAll(".video-item")).find(
     (item) => item.getAttribute("data-video-id") === videoId
@@ -487,7 +550,7 @@ function updateCurrentTitle(videoId) {
     const currentTitle = currentItem.querySelector(".video-info p").innerText;
     document.getElementById("current-title").innerText = currentTitle;
   } else {
-    document.getElementById("current-title").innerText = "None";
+    document.getElementById("current-title").innerText = "Now Playing: None";
   }
 }
 
@@ -577,3 +640,130 @@ function addVideo(videoElement) {
 
 // Attach resize event listener if needed for dynamic adjustments
 window.addEventListener("resize", updateContainerSize);
+
+function showContextMenu(videoItem, x, y) {
+  // Remove any existing context menu to avoid duplicates
+  const existingMenu = document.getElementById("context-menu");
+  if (existingMenu) existingMenu.remove();
+
+  const contextMenu = document.createElement("div");
+  contextMenu.id = "context-menu";
+  contextMenu.className = "context-menu";
+  contextMenu.innerHTML = `
+      <div class="context-menu-item" onclick="copyToClipboard('${videoItem.getAttribute(
+        "data-url"
+      )}')">Copy Link</div>
+  `;
+  document.body.appendChild(contextMenu);
+
+  // Measure menu height after it's in the DOM
+  const menuHeight = contextMenu.offsetHeight;
+
+  // Position the context menu above the touch point
+  contextMenu.style.left = `${x - 50}px`;
+  contextMenu.style.top = `${y - 70 - menuHeight}px`;
+  contextMenu.style.display = "block";
+
+  // Add an event listener to close the context menu on any touch or click outside
+  setTimeout(() => {
+    document.addEventListener("touchstart", handleOutsideTouch, { once: true });
+    document.addEventListener("click", handleOutsideClick, { once: true });
+  }, 0);
+}
+
+// Function to handle clicks outside the context menu
+function handleOutsideClick(event) {
+  const contextMenu = document.getElementById("context-menu");
+
+  // Check if the click was outside the context menu
+  if (contextMenu && !contextMenu.contains(event.target)) {
+    hideContextMenu();
+  }
+}
+
+// Function to handle touch events outside the context menu
+function handleOutsideTouch(event) {
+  const contextMenu = document.getElementById("context-menu");
+
+  // Check if the touch was outside the context menu
+  if (contextMenu && !contextMenu.contains(event.target)) {
+    hideContextMenu();
+  }
+}
+
+function hideContextMenu() {
+  const contextMenu = document.getElementById("context-menu");
+  if (contextMenu) contextMenu.remove();
+}
+
+function attachLongPressListener(videoItem) {
+  let longPressTimeout;
+
+  videoItem.addEventListener("touchstart", function (e) {
+    longPressTimeout = setTimeout(() => {
+      e.preventDefault();
+      showContextMenu(videoItem, e.touches[0].clientX, e.touches[0].clientY);
+    }, 500); // 0.5-second delay for long-press
+  });
+
+  videoItem.addEventListener("touchend", () => clearTimeout(longPressTimeout));
+  videoItem.addEventListener("touchmove", () => clearTimeout(longPressTimeout));
+  videoItem.addEventListener("touchcancel", () =>
+    clearTimeout(longPressTimeout)
+  );
+}
+
+function copyToClipboard(text) {
+  if (navigator.clipboard) {
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        showNotification("Link copied to clipboard");
+        hideContextMenu(); // Hide the context menu after copying
+      })
+      .catch((err) => {
+        showNotification("Failed to copy link");
+        console.error("Error copying link: ", err);
+      });
+  } else {
+    // Fallback for older browsers
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand("copy");
+      showNotification("Link copied to clipboard");
+    } catch (err) {
+      showNotification("Failed to copy link");
+      console.error("Error copying link: ", err);
+    }
+    document.body.removeChild(textarea);
+    hideContextMenu(); // Hide the context menu after copying
+  }
+}
+// Fallback copy method
+function showFallbackCopy(text) {
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.style.position = "fixed"; // Avoid scrolling to bottom
+  textarea.style.opacity = "0"; // Make it invisible
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+
+  try {
+    const successful = document.execCommand("copy");
+    if (successful) {
+      showNotification("Link copied to clipboard!");
+    } else {
+      showNotification("Failed to copy link");
+    }
+  } catch (err) {
+    console.error("Fallback copy error:", err);
+    showNotification("Failed to copy link");
+  }
+
+  document.body.removeChild(textarea);
+  hideContextMenu();
+}
