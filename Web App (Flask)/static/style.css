@@ -121,8 +121,10 @@ h1 {
   transition: color 0.3s;
 }
 
-.header button:hover {
-  color: #ff9900;
+@media (hover: hover) and (pointer: fine) {
+  .header button:hover {
+    color: #ff9900;
+  }
 }
 
 .video-container,
@@ -247,10 +249,12 @@ h1 {
   transition: background-color 0.3s, box-shadow 0.3s;
 }
 
-.controls button:hover,
-.video-form button:hover {
-  background-color: #0056b3;
-  color: #fff;
+@media (hover: hover) and (pointer: fine) {
+  .controls button:hover,
+  .video-form button:hover {
+    background-color: #0056b3;
+    color: #fff;
+  }
 }
 
 .dark-mode .controls button,
@@ -259,10 +263,12 @@ h1 {
   color: #fff;
 }
 
-.dark-mode .controls button:hover,
-.dark-mode .video-form button:hover {
-  background-color: #0056b3;
-  color: #fff;
+@media (hover: hover) and (pointer: fine) {
+  .dark-mode .controls button:hover,
+  .dark-mode .video-form button:hover {
+    background-color: #0056b3;
+    color: #fff;
+  }
 }
 
 .controls .dark-mode-toggle {
@@ -271,8 +277,10 @@ h1 {
   color: #fff;
 }
 
-.controls .dark-mode-toggle:hover {
-  background-color: #444;
+@media (hover: hover) and (pointer: fine) {
+  .controls .dark-mode-toggle:hover {
+    background-color: #444;
+  }
 }
 
 .volume-control {
@@ -354,8 +362,10 @@ h1 {
   transition: transform 0.3s ease-out, background-color 0.3s ease-out;
 }
 
-.video-item:hover {
-  background-color: #f0f0f0;
+@media (hover: hover) and (pointer: fine) {
+  .video-item:hover {
+    background-color: #f0f0f0;
+  }
 }
 
 .dark-mode .video-item {
@@ -395,8 +405,10 @@ h1 {
   transition: color 0.3s;
 }
 
-.remove-btn:hover {
-  color: #ff1a1a;
+@media (hover: hover) and (pointer: fine) {
+  .remove-btn:hover {
+    color: #ff1a1a;
+  }
 }
 
 .playing {
@@ -622,8 +634,10 @@ body.dark-mode .controls-card,
   transition: background-color 0.2s;
 }
 
-.suggestion-item:hover {
-  background-color: #f0f0f0;
+@media (hover: hover) and (pointer: fine) {
+  .suggestion-item:hover {
+    background-color: #f0f0f0;
+  }
 }
 
 .error-message {
@@ -645,8 +659,10 @@ body.dark-mode .controls-card,
   color: #ddd;
 }
 
-.dark-mode .suggestion-item:hover {
-  background-color: #444;
+@media (hover: hover) and (pointer: fine) {
+  .dark-mode .suggestion-item:hover {
+    background-color: #444;
+  }
 }
 
 /* Toggle Switch Styles */
@@ -804,8 +820,10 @@ body.dark-mode #notification-overlay {
   white-space: nowrap;
 }
 
-.context-menu-item:hover {
-  background-color: #f0f0f0;
+@media (hover: hover) and (pointer: fine) {
+  .context-menu-item:hover {
+    background-color: #f0f0f0;
+  }
 }
 
 .dark-mode .context-menu {
@@ -816,4 +834,68 @@ body.dark-mode #notification-overlay {
 
 .dark-mode .context-menu-item:hover {
   background-color: #444;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  /* Simulate hover effects for mobile touchscreens */
+
+  .header button:active,
+  .controls button:active,
+  .video-item:active,
+  .remove-btn:active {
+    background-color: #f0f0f0;
+    /* Simulate the hover effect with a color change */
+  }
+
+  /* Add an effect on touch start */
+  .video-item:active {
+    background-color: #e0e0e0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+}
+
+/* Ensure consistent size during touch/click */
+button,
+.header button,
+.controls button,
+.remove-btn,
+.suggestions-toggle,
+.dark-mode-toggle,
+.add-video-btn {
+  -webkit-tap-highlight-color: transparent; /* Remove tap highlight color */
+  outline: none; /* Remove outline on click */
+  transform: scale(1); /* Ensure no scaling */
+  transition: background-color 0.1s, box-shadow 0.1s; /* Keep transitions */
+}
+
+/* Prevent resizing or scaling on touch */
+button:active,
+.header button:active,
+.controls button:active,
+.remove-btn:active,
+.suggestions-toggle:active,
+.dark-mode-toggle:active,
+.add-video-btn {
+  transform: scale(1); /* Prevent the button from scaling */
+}
+
+.add-video-btn {
+  /* Apply similar styles as the other buttons */
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+  transform: scale(1);
+  transition: background-color 0.3s, box-shadow 0.3s;
+}
+
+.add-video-btn:active {
+  transform: scale(1);
+  background-color: #f0f0f0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .add-video-btn:hover {
+    background-color: #0056b3;
+    color: #fff;
+  }
 }
