@@ -6,16 +6,20 @@ import yt_dlp
 import socket
 from youtubesearchpython import VideosSearch
 import random
+from youtubesearchpython.extras import Video
+from youtubesearchpython import Playlist as YTPlaylist
+from youtubesearchpython import *
+from youtubesearchpython import VideosSearch
+
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "your_secret_key"
-socketio = SocketIO(app, max_http_buffer_size=1000000)  # Adjust the size as needed
+socketio = SocketIO(app, max_http_buffer_size=1000000) 
 
 video_list = []
 current_video_id = None
 player_state = "paused"
 current_volume = 10
-YOUTUBE_API_KEY = "AIzaSyC-x1733bNl22rbecjJe6CNHhW62lIx_js"
 
 
 @app.route("/")
@@ -33,45 +37,42 @@ def home():
 def handle_new_video(data):
     try:
         if "list=" in data["link"]:
-            playlist = Playlist(data["link"])
-            for url in playlist.video_urls:
-                add_video_to_list(url)
+            # Fetch playlist videos using youtubesearchpython
+            videos = fetch_videos_from_playlist(data["link"])
+            for video in videos:
+                video_list.append(video)
+                emit("update_playlist", video, broadcast=True)
         else:
             add_video_to_list(data["link"])
     except Exception as e:
         print(f"Error adding video: {e}")
 
 
-def add_video_to_list(url):
-    try:
-        if "list=" in url:  # Check if it's a playlist
-            playlist_id = extract_playlist_id(url)
-            videos = fetch_videos_from_playlist(playlist_id)
-            for video in videos:
-                video_list.append(video)
-                emit("update_playlist", video, broadcast=True)
-        else:
-            video_id = extract_video_id(url)
-            video_info = fetch_youtube_data(video_id)
-            if video_info:
-                video_info.update(
-                    {
-                        "id": len(video_list),
-                        "video_id": video_id,
-                    }
-                )
-                video_list.append(video_info)
-                emit("update_playlist", video_info, broadcast=True)
-    except Exception as e:
-        print(f"Error adding video: {e}")
-
-
 def extract_video_id(url):
+    """Extracts video ID from YouTube URLs."""
     if "v=" in url:
         return url.split("v=")[1].split("&")[0]
     elif "youtu.be/" in url:
         return url.split("youtu.be/")[1].split("?")[0]
     return None
+
+
+# Example updated add_video_to_list function
+def add_video_to_list(url):
+    try:
+        if "list=" in url:  # Check if it's a playlist
+            videos = fetch_videos_from_playlist(url)
+            for video in videos:
+                video_list.append(video)
+                emit("update_playlist", video, broadcast=True)
+        else:
+            video_info = fetch_youtube_data(url)
+            if video_info:
+                video_info.update({"id": len(video_list), "video_id": extract_video_id(url)})
+                video_list.append(video_info)
+                emit("update_playlist", video_info, broadcast=True)
+    except Exception as e:
+        print(f"Error adding video: {e}")
 
 
 def extract_playlist_id(url):
@@ -80,60 +81,69 @@ def extract_playlist_id(url):
     return None
 
 
-def fetch_youtube_data(video_id):
-    url = f"https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id={video_id}&key={YOUTUBE_API_KEY}"
-    response = requests.get(url)
-    if response.status_code == 200:
-        data = response.json()
-        if "items" in data and data["items"]:
-            item = data["items"][0]
-            snippet = item["snippet"]
-            content_details = item["contentDetails"]
-            category_id = snippet.get("categoryId")
-            tags = snippet.get("tags", [])
-            length = parse_duration(content_details["duration"])
+def fetch_youtube_data(video_url):
+    """Fetches video information using youtubesearchpython"""
+    try:
+        # Clean the URL to extract the video ID
+        video_id = extract_video_id(video_url)
+        if not video_id:
+            print("Invalid video URL.")
+            return {}
 
-            title = snippet.get("title", "Unknown Title")
-            thumbnail = snippet.get("thumbnails", {}).get("high", {}).get("url", "")
-            is_music = category_id == "10" or "music" in [tag.lower() for tag in tags]
+        # Rebuild the clean URL
+        clean_url = f"https://youtu.be/{video_id}"
+
+        # Fetch video information
+        video_info = Video.getInfo(clean_url, mode="json")
+        # print(f"Fetched video info: {video_info}")
+
+        if video_info:
+            title = video_info.get("title", "Unknown Title")
+            thumbnails = video_info.get("thumbnails", [{}])
+            thumbnail = thumbnails[-1].get("url", "") if thumbnails else ""
+            channel_name = video_info.get("channel", {}).get("name", "Unknown Channel")
+            duration_seconds = int(video_info.get("duration", {}).get("secondsText", 0) or 0)
+            category = video_info.get("category", "Unknown")
+
+            # Determine if it's music-related
+            is_music = category.lower() == "music"
 
             if is_music:
                 return {
                     "title": title,
                     "thumbnail": thumbnail,
-                    "artist": snippet["channelTitle"],
-                    "album": snippet.get("album", "Unknown Album"),
-                    "length": length,
+                    "artist": channel_name,
+                    "length": duration_seconds,
                 }
             else:
                 return {
                     "title": title,
                     "thumbnail": thumbnail,
-                    "creator": snippet["channelTitle"],
-                    "length": length,
+                    "creator": channel_name,
+                    "length": duration_seconds,
                 }
-    return {}
+        return {}
+    except Exception as e:
+        print(f"Error fetching video info: {e}")
+        return {}
 
-
-def fetch_videos_from_playlist(playlist_id):
-    url = f"https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId={playlist_id}&maxResults=50&key={YOUTUBE_API_KEY}"
-    response = requests.get(url)
-    video_list_local = []
-    if response.status_code == 200:
-        data = response.json()
-        for item in data.get("items", []):
-            video_id = item["snippet"]["resourceId"]["videoId"]
-            video_info = fetch_youtube_data(video_id)
-            if video_info:
-                video_info.update(
-                    {
-                        "id": len(video_list_local),
-                        "video_id": video_id,
-                    }
-                )
-                video_list_local.append(video_info)
-    return video_list_local
-
+def fetch_videos_from_playlist(playlist_url):
+    """Fetches videos from a playlist using youtubesearchpython"""
+    try:
+        # Get playlist information
+        playlist = YTPlaylist.getVideos(playlist_url, mode="json")
+        video_list_local = []
+        for video in playlist.get("videos", []):
+            video_url = video.get("link", "")
+            if video_url:
+                video_info = fetch_youtube_data(video_url)
+                if video_info:
+                    video_info.update({"id": len(video_list_local), "video_id": video["id"]})
+                    video_list_local.append(video_info)
+        return video_list_local
+    except Exception as e:
+        print(f"Error fetching playlist videos: {e}")
+        return []
 
 def parse_duration(duration):
     hours = minutes = seconds = 0
@@ -187,6 +197,51 @@ def handle_remove_video(data):
 
     emit("update_list", video_list, broadcast=True)
 
+@socketio.on("search_videos")
+def search_videos(data):
+    query = data.get("query", "")
+    if not query:
+        emit("suggestions", {"error": "Query is missing"})
+        return
+
+    try:
+        videos_search = VideosSearch(query, limit=5)
+        results = videos_search.result()["result"]
+        suggestions = [
+            {
+                "videoId": video["id"],
+                "title": video["title"],
+                "thumbnail": video["thumbnails"][-1]["url"],
+                "channel": video["channel"]["name"],
+                "duration": video.get("duration", "Unknown"),
+            }
+            for video in results
+        ]
+        emit("suggestions", {"suggestions": suggestions})
+    except Exception as e:
+        print(f"Error fetching suggestions: {e}")
+        emit("suggestions", {"error": str(e)})
+
+
+@app.route("/search_suggestions")
+def search_suggestions():
+    query = request.args.get("query", "")
+    if not query:
+        return jsonify({"error": "Query is empty"}), 400
+    try:
+        search = VideosSearch(query, limit=5)
+        results = search.result()["result"]
+        suggestions = [
+            {
+                "title": result["title"],
+                "thumbnail": result["thumbnails"][0]["url"],
+                "videoId": result["id"],
+            }
+            for result in results
+        ]
+        return jsonify({"suggestions": suggestions})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @socketio.on("shuffle_playlist")
 def handle_shuffle_playlist():

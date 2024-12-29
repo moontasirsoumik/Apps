@@ -8,6 +8,7 @@ let currentLink = "";
 let isSwiping = false;
 let swipeStartX = 0;
 let swipeStartY = 0;
+let debounceTimer; // Timer for debounce
 const swipeThreshold = 50;
 
 // --- Now defaulting to 20% volume. ---
@@ -15,42 +16,76 @@ let current_volume = 20;
 let isSeeking = false;
 
 const socket = io();
-const YOUTUBE_API_KEY = "AIzaSyC-x1733bNl22rbecjJe6CNHhW62lIx_js";
 player = document.getElementById("player"); // <audio> element
 let hasUserInteracted = false;
+
+// Cache DOM elements
+const inputField = document.getElementById("youtube-link");
+const actionButton = document.getElementById("action-button");
 
 //---------------------------------------------------------------------
 // 1) Video Form & Suggestions
 //---------------------------------------------------------------------
-document.getElementById("video-form").addEventListener("submit", function (e) {
-  e.preventDefault();
-  const link = document.getElementById("youtube-link").value;
-  currentLink = link;
-  socket.emit("new_video", { link });
-  document.getElementById("youtube-link").value = "";
-  hideSuggestions();
-});
-
 document.getElementById("youtube-link").addEventListener("input", function () {
   const query = this.value;
   if (suggestionsEnabled && query.length > 2) {
-    fetchSuggestions(query);
+    debouncedFetchSuggestions(query);
   } else {
     hideSuggestions();
+    // clearInput();
   }
 });
 
-function fetchSuggestions(query) {
-  const suggestionsUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=5&q=${query}&key=${YOUTUBE_API_KEY}&type=video`;
-  fetch(suggestionsUrl)
+// Update the button icon based on input type (query or link)
+inputField.addEventListener("input", () => {
+  const value = inputField.value.trim();
+  if (isYouTubeLink(value)) {
+    actionButton.innerHTML = '<i class="fas fa-plus"></i>'; // Add icon
+    actionButton.title = "Add Link";
+  } else {
+    actionButton.innerHTML = '<i class="fas fa-search"></i>'; // Search icon
+    actionButton.title = "Search Query";
+  }
+});
+
+// Handle form submission
+document.getElementById("video-form").addEventListener("submit", function (e) {
+  e.preventDefault();
+  const query = inputField.value.trim();
+
+  if (!query) return; // Do nothing if the field is empty
+
+  if (isYouTubeLink(query)) {
+    // If it's a link, add it directly
+    socket.emit("new_video", { link: query });
+    clearInput();
+  } else {
+    // If it's a query, fetch suggestions
+    debouncedFetchSuggestions(query);
+  }
+});
+
+// Debounce function
+function debounce(func, delay) {
+  let timer;
+  return function (...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => func.apply(this, args), delay);
+  };
+}
+
+function fetchSuggestionsFallback(query) {
+  fetch(`/search_suggestions?query=${encodeURIComponent(query)}`)
     .then((response) => response.json())
     .then((data) => {
       if (data.error) {
-        showError("YouTube API error: " + data.error.message);
+        showError("Error fetching suggestions: " + data.error);
         return;
       }
-      if (data.items && data.items.length > 0) {
-        showSuggestions(data.items);
+
+      const suggestions = data.suggestions || [];
+      if (suggestions.length > 0) {
+        showSuggestions(suggestions);
       } else {
         hideSuggestions();
       }
@@ -62,6 +97,47 @@ function fetchSuggestions(query) {
     });
 }
 
+// Debounced function for suggestions
+const debouncedFetchSuggestions = debounce((query) => {
+  if (query.length > 2) {
+    if (socket.connected) {
+      // Use WebSocket if connected
+      socket.emit("search_videos", { query });
+      socket.once("suggestions", (data) => {
+        if (data.error) {
+          showError("Error fetching suggestions: " + data.error);
+          return;
+        }
+        const suggestions = data.suggestions || [];
+        if (suggestions.length > 0) {
+          showSuggestions(suggestions);
+        } else {
+          hideSuggestions();
+        }
+      });
+    } else {
+      // Fallback to fetch if WebSocket is not available
+      fetchSuggestionsFallback(query);
+    }
+  } else {
+    hideSuggestions();
+  }
+}, 300);
+
+// Attach debounced handler to input field
+document.getElementById("youtube-link").addEventListener("input", function () {
+  const query = this.value.trim();
+  debounceddebouncedFetchSuggestions(query);
+});
+
+// Determine if the input is a YouTube link
+function isYouTubeLink(input) {
+  const linkRegex =
+    /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/(watch\?v=|playlist\?list=|.+)/i;
+  return linkRegex.test(input);
+}
+
+// Show suggestions overlay
 function showSuggestions(suggestions) {
   if (!suggestionOverlay) {
     suggestionOverlay = document.createElement("div");
@@ -72,13 +148,98 @@ function showSuggestions(suggestions) {
   suggestions.forEach((item) => {
     const suggestionItem = document.createElement("div");
     suggestionItem.className = "suggestion-item";
-    suggestionItem.textContent = item.snippet.title;
-    suggestionItem.onclick = () =>
-      selectSuggestion(item.id.videoId, item.snippet.title);
+    suggestionItem.innerHTML = `
+      <div class="suggestion-thumbnail">
+        <img src="${item.thumbnail}" alt="${item.title}">
+      </div>
+      <div class="suggestion-info">
+        <p class="suggestion-title">${item.title}</p>
+      </div>
+    `;
+    suggestionItem.onclick = () => selectSuggestion(item.videoId, item.title);
     suggestionOverlay.appendChild(suggestionItem);
   });
   positionSuggestions();
   suggestionOverlay.style.display = "block";
+
+  // Add event listeners to detect clicks or touches outside the overlay
+  setTimeout(() => {
+    document.addEventListener("click", handleOutsideClick);
+    document.addEventListener("touchstart", handleOutsideTouch);
+  }, 0);
+}
+
+function handleOutsideClick(event) {
+  const contextMenu = document.getElementById("context-menu");
+  const inputField = document.getElementById("youtube-link");
+
+  // Check and hide context menu
+  if (contextMenu && !contextMenu.contains(event.target)) {
+    hideContextMenu();
+  }
+
+  // Check and hide suggestions overlay
+  if (
+    suggestionOverlay &&
+    suggestionOverlay.style.display === "block" &&
+    !suggestionOverlay.contains(event.target) &&
+    event.target !== inputField
+  ) {
+    hideSuggestions();
+  }
+}
+
+function handleOutsideTouch(event) {
+  const contextMenu = document.getElementById("context-menu");
+  const inputField = document.getElementById("youtube-link");
+
+  // Check and hide context menu
+  if (contextMenu && !contextMenu.contains(event.target)) {
+    hideContextMenu();
+  }
+
+  // Check and hide suggestions overlay
+  if (
+    suggestionOverlay &&
+    suggestionOverlay.style.display === "block" &&
+    !suggestionOverlay.contains(event.target) &&
+    event.target !== inputField
+  ) {
+    hideSuggestions();
+  }
+}
+
+// Handle suggestion selection
+function selectSuggestion(videoId, title) {
+  inputField.value = ""; // Clear the input field
+  hideSuggestions();
+  clearInput();
+  const link = `https://www.youtube.com/watch?v=${videoId}`;
+  socket.emit("new_video", { link });
+}
+
+// Hide suggestions overlay
+function hideSuggestions() {
+  if (suggestionOverlay) {
+    suggestionOverlay.style.display = "none";
+    document.removeEventListener("click", handleOutsideClick);
+    document.removeEventListener("touchstart", handleOutsideTouch);
+  }
+}
+
+// Position suggestions overlay
+function positionSuggestions() {
+  const rect = inputField.getBoundingClientRect();
+  if (!suggestionOverlay) return;
+  suggestionOverlay.style.left = `${rect.left}px`;
+  suggestionOverlay.style.top = `${rect.bottom + window.scrollY}px`;
+  suggestionOverlay.style.width = `${rect.width}px`;
+}
+
+function clearInput() {
+  inputField.value = ""; // Clear the text in the field
+  inputField.dispatchEvent(new Event("input")); // Trigger the input event to update the button icon
+  hideSuggestions();
 }
 
 function showError(message) {
@@ -107,12 +268,12 @@ function positionSuggestions() {
   suggestionOverlay.style.width = `${rect.width}px`;
 }
 
-function selectSuggestion(videoId, title) {
-  document.getElementById("youtube-link").value = title;
-  hideSuggestions();
-  currentLink = `https://www.youtube.com/watch?v=${videoId}`;
-  socket.emit("new_video", { link: currentLink });
-}
+// function selectSuggestion(videoId, title) {
+//   document.getElementById("youtube-link").value = title;
+//   hideSuggestions();
+//   currentLink = `https://www.youtube.com/watch?v=${videoId}`;
+//   socket.emit("new_video", { link: currentLink });
+// }
 
 //---------------------------------------------------------------------
 // 2) Socket.IO Event Handlers
