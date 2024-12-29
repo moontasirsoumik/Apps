@@ -148,6 +148,12 @@ h1 {
 .video-title {
   font-weight: bold;
   font-size: 1em;
+  display: -webkit-box; /* Flexbox for webkit browsers */
+  -webkit-line-clamp: 1; /* Show only 1 line */
+  -webkit-box-orient: vertical; /* Vertical text direction */
+  overflow: hidden; /* Hide overflowing text */
+  text-overflow: ellipsis; /* Add ellipsis at the end of truncated text */
+  max-width: 100%; /* Ensure it fits within the container */
 }
 
 .video-meta {
@@ -331,6 +337,8 @@ h1 {
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
   cursor: pointer;
   transition: background-color 0.3s, box-shadow 0.3s;
+  height: auto; /* Ensure it adapts to content height */
+  overflow: visible; /* Do not clip content of the whole card */
 }
 
 .video-item.removing {
@@ -361,6 +369,7 @@ h1 {
 .video-info {
   flex-grow: 1;
   text-align: left;
+  flex-direction: column;
 }
 
 .video-info p {

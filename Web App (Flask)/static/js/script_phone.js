@@ -518,20 +518,24 @@ document.getElementById("dark-mode-toggle").addEventListener("click", () => {
 document
   .getElementById("suggestions-toggle")
   .addEventListener("change", (event) => {
-    suggestionsEnabled = event.target.checked;
-    localStorage.setItem("suggestionsEnabled", suggestionsEnabled);
-    showNotification(suggestionsEnabled ? "Suggestions On" : "Suggestions Off");
+    // Ensure suggestions are always enabled
+    if (!event.target.checked) {
+      event.target.checked = true; // Force the toggle to stay on
+      suggestionsEnabled = true;
+      showNotification("Suggestions cannot be disabled.");
+    } else {
+      suggestionsEnabled = true;
+      showNotification("Suggestions are enabled.");
+    }
+    localStorage.setItem("suggestionsEnabled", true); // Always save as enabled
   });
 
 window.addEventListener("load", () => {
   const isDarkMode = localStorage.getItem("darkMode") === "true";
-  suggestionsEnabled = localStorage.getItem("suggestionsEnabled") === "true";
+  suggestionsEnabled = true; // Force suggestions to be enabled on load
 
-  // Set the UI slider to 20% and the player volume to 0.2 on load
+  // Ensure volume slider starts at 20%
   document.getElementById("volume-slider").value = 20;
-  if (player) {
-    player.volume = 0.2;
-  }
 
   if (isDarkMode) {
     document.body.classList.add("dark-mode");
@@ -540,7 +544,10 @@ window.addEventListener("load", () => {
       .querySelector("i")
       .classList.replace("fa-moon", "fa-sun");
   }
-  document.getElementById("suggestions-toggle").checked = suggestionsEnabled;
+
+  document.getElementById("suggestions-toggle").checked = true; // Always checked
+  localStorage.setItem("suggestionsEnabled", true); // Always save as enabled
+
   socket.emit("request_current_video");
 });
 

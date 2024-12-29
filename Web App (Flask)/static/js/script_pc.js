@@ -657,7 +657,20 @@ window.addEventListener("load", () => {
       .querySelector("i")
       .classList.replace("fa-moon", "fa-sun");
   }
-  document.getElementById("suggestions-toggle").checked = suggestionsEnabled;
+  document
+    .getElementById("suggestions-toggle")
+    .addEventListener("change", (event) => {
+      // Ensure suggestions are always enabled
+      if (!event.target.checked) {
+        event.target.checked = true; // Force the toggle to stay on
+        suggestionsEnabled = true;
+        showNotification("Suggestions cannot be disabled.");
+      } else {
+        suggestionsEnabled = true;
+        showNotification("Suggestions are enabled.");
+      }
+      localStorage.setItem("suggestionsEnabled", true); // Always save as enabled
+    });
   socket.emit("request_current_video");
 });
 
