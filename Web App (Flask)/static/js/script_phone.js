@@ -131,16 +131,10 @@ const debouncedFetchSuggestions = debounce((query) => {
   }
 }, 300);
 
-// Attach debounced handler to input field
-document.getElementById("youtube-link").addEventListener("input", function () {
-  const query = this.value.trim();
-  debounceddebouncedFetchSuggestions(query);
-});
-
 // Determine if the input is a YouTube link
 function isYouTubeLink(input) {
   const linkRegex =
-    /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/(watch\?v=|playlist\?list=|.+)/i;
+    /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|music\.youtube\.com)\/(watch\?v=|playlist\?list=|.+)/i;
   return linkRegex.test(input);
 }
 
@@ -218,21 +212,6 @@ function showError(message) {
   suggestionOverlay.innerHTML = `<div class="error-message">${message}</div>`;
   positionSuggestions();
   suggestionOverlay.style.display = "block";
-}
-
-function hideSuggestions() {
-  if (suggestionOverlay) {
-    suggestionOverlay.style.display = "none";
-  }
-}
-
-function positionSuggestions() {
-  const inputBox = document.getElementById("youtube-link");
-  const rect = inputBox.getBoundingClientRect();
-  if (!suggestionOverlay) return;
-  suggestionOverlay.style.left = `${rect.left}px`;
-  suggestionOverlay.style.top = `${rect.bottom + window.scrollY}px`;
-  suggestionOverlay.style.width = `${rect.width}px`;
 }
 
 window.addEventListener("resize", positionSuggestions);
@@ -370,7 +349,6 @@ seekSlider.addEventListener("change", function (e) {
 //--------------------------------------------------------------------------
 // 5) Controls: Play/Pause, Shuffle, Volume => just emit to server
 //--------------------------------------------------------------------------
-
 document.getElementById("play-pause-btn").addEventListener("click", () => {
   socket.emit("play_pause");
   socket.emit("request_current_video");
@@ -548,6 +526,13 @@ document
 window.addEventListener("load", () => {
   const isDarkMode = localStorage.getItem("darkMode") === "true";
   suggestionsEnabled = localStorage.getItem("suggestionsEnabled") === "true";
+
+  // Set the UI slider to 20% and the player volume to 0.2 on load
+  document.getElementById("volume-slider").value = 20;
+  if (player) {
+    player.volume = 0.2;
+  }
+
   if (isDarkMode) {
     document.body.classList.add("dark-mode");
     document

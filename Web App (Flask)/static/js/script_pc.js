@@ -124,16 +124,10 @@ const debouncedFetchSuggestions = debounce((query) => {
   }
 }, 300);
 
-// Attach debounced handler to input field
-document.getElementById("youtube-link").addEventListener("input", function () {
-  const query = this.value.trim();
-  debounceddebouncedFetchSuggestions(query);
-});
-
 // Determine if the input is a YouTube link
 function isYouTubeLink(input) {
   const linkRegex =
-    /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/(watch\?v=|playlist\?list=|.+)/i;
+    /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|music\.youtube\.com)\/(watch\?v=|playlist\?list=|.+)/i;
   return linkRegex.test(input);
 }
 
@@ -218,7 +212,7 @@ function selectSuggestion(videoId, title) {
   socket.emit("new_video", { link });
 }
 
-// Hide suggestions overlay
+// Hide suggestions overlay (removes event listeners too)
 function hideSuggestions() {
   if (suggestionOverlay) {
     suggestionOverlay.style.display = "none";
@@ -251,21 +245,6 @@ function showError(message) {
   suggestionOverlay.innerHTML = `<div class="error-message">${message}</div>`;
   positionSuggestions();
   suggestionOverlay.style.display = "block";
-}
-
-function hideSuggestions() {
-  if (suggestionOverlay) {
-    suggestionOverlay.style.display = "none";
-  }
-}
-
-function positionSuggestions() {
-  const inputBox = document.getElementById("youtube-link");
-  const rect = inputBox.getBoundingClientRect();
-  const suggestionOverlay = document.getElementById("suggestion-overlay");
-  suggestionOverlay.style.left = `${rect.left}px`;
-  suggestionOverlay.style.top = `${rect.bottom + window.scrollY}px`;
-  suggestionOverlay.style.width = `${rect.width}px`;
 }
 
 // function selectSuggestion(videoId, title) {
@@ -608,15 +587,15 @@ document.getElementById("shuffle-btn").addEventListener("click", () => {
  *  Setting the player volume to 0.2 initially to match the UI slider,
  *  which we will also set to 20 on load.
  */
-document.getElementById("volume-slider").addEventListener("input", function () {
-  const volume = this.value;
-  current_volume = volume;
-  if (player) {
-    player.volume = volume / 100;
-  }
-  socket.emit("change_volume", { volume });
-  showVolumeOverlay(volume);
-});
+// document.getElementById("volume-slider").addEventListener("input", function () {
+//   const volume = this.value;
+//   current_volume = volume;
+//   if (player) {
+//     player.volume = volume / 100;
+//   }
+//   socket.emit("change_volume", { volume });
+//   showVolumeOverlay(volume);
+// });
 
 //---------------------------------------------------------------------
 // 6) Seek Handling

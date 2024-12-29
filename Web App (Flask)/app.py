@@ -1,16 +1,10 @@
 from flask import Flask, render_template, request, jsonify
 from flask_socketio import SocketIO, emit
-from pytube import YouTube, Playlist
-import requests
 import yt_dlp
 import socket
-from youtubesearchpython import VideosSearch
 import random
 from youtubesearchpython.extras import Video
-from youtubesearchpython import Playlist as YTPlaylist
-from youtubesearchpython import *
-from youtubesearchpython import VideosSearch
-
+from youtubesearchpython import Playlist as YTPlaylist, VideosSearch
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "your_secret_key"
@@ -21,7 +15,6 @@ current_video_id = None
 player_state = "paused"
 current_volume = 10
 
-
 @app.route("/")
 def home():
     user_agent = request.headers.get("User-Agent")
@@ -31,7 +24,6 @@ def home():
         return render_template("index_pc.html", videos=video_list)
     else:
         return render_template("index_pc.html", videos=video_list)
-
 
 @socketio.on("new_video")
 def handle_new_video(data):
@@ -47,7 +39,6 @@ def handle_new_video(data):
     except Exception as e:
         print(f"Error adding video: {e}")
 
-
 def extract_video_id(url):
     """Extracts video ID from YouTube URLs."""
     if "v=" in url:
@@ -56,8 +47,6 @@ def extract_video_id(url):
         return url.split("youtu.be/")[1].split("?")[0]
     return None
 
-
-# Example updated add_video_to_list function
 def add_video_to_list(url):
     try:
         if "list=" in url:  # Check if it's a playlist
@@ -66,9 +55,15 @@ def add_video_to_list(url):
                 video_list.append(video)
                 emit("update_playlist", video, broadcast=True)
         else:
+            # Clean URL for YouTube Music
+            if "music.youtube.com" in url:
+                url = url.replace("music.youtube.com", "www.youtube.com")
             video_info = fetch_youtube_data(url)
             if video_info:
-                video_info.update({"id": len(video_list), "video_id": extract_video_id(url)})
+                video_info.update({
+                    "id": len(video_list),
+                    "video_id": extract_video_id(url)
+                })
                 video_list.append(video_info)
                 emit("update_playlist", video_info, broadcast=True)
     except Exception as e:
@@ -79,7 +74,6 @@ def extract_playlist_id(url):
     if "list=" in url:
         return url.split("list=")[1].split("&")[0]
     return None
-
 
 def fetch_youtube_data(video_url):
     """Fetches video information using youtubesearchpython"""
@@ -95,8 +89,6 @@ def fetch_youtube_data(video_url):
 
         # Fetch video information
         video_info = Video.getInfo(clean_url, mode="json")
-        # print(f"Fetched video info: {video_info}")
-
         if video_info:
             title = video_info.get("title", "Unknown Title")
             thumbnails = video_info.get("thumbnails", [{}])
@@ -130,7 +122,6 @@ def fetch_youtube_data(video_url):
 def fetch_videos_from_playlist(playlist_url):
     """Fetches videos from a playlist using youtubesearchpython"""
     try:
-        # Get playlist information
         playlist = YTPlaylist.getVideos(playlist_url, mode="json")
         video_list_local = []
         for video in playlist.get("videos", []):
@@ -138,26 +129,15 @@ def fetch_videos_from_playlist(playlist_url):
             if video_url:
                 video_info = fetch_youtube_data(video_url)
                 if video_info:
-                    video_info.update({"id": len(video_list_local), "video_id": video["id"]})
+                    video_info.update({
+                        "id": len(video_list_local),
+                        "video_id": video["id"]
+                    })
                     video_list_local.append(video_info)
         return video_list_local
     except Exception as e:
         print(f"Error fetching playlist videos: {e}")
         return []
-
-def parse_duration(duration):
-    hours = minutes = seconds = 0
-    duration = duration.replace("PT", "")
-    if "H" in duration:
-        hours, duration = duration.split("H")
-        hours = int(hours)
-    if "M" in duration:
-        minutes, duration = duration.split("M")
-        minutes = int(minutes)
-    if "S" in duration:
-        seconds = int(duration.replace("S", ""))
-    return hours * 3600 + minutes * 60 + seconds
-
 
 @socketio.on("remove_video")
 def handle_remove_video(data):
@@ -222,7 +202,6 @@ def search_videos(data):
         print(f"Error fetching suggestions: {e}")
         emit("suggestions", {"error": str(e)})
 
-
 @app.route("/search_suggestions")
 def search_suggestions():
     query = request.args.get("query", "")
@@ -265,7 +244,6 @@ def handle_shuffle_playlist():
     emit("update_list", video_list, broadcast=True)
     emit("playlist_shuffled", broadcast=True)
 
-
 @socketio.on("reorder_videos")
 def handle_reorder_videos(data):
     global video_list
@@ -276,7 +254,6 @@ def handle_reorder_videos(data):
     ]
     video_list = reordered_list
     emit("update_list", video_list, broadcast=True)
-
 
 @socketio.on("request_current_video")
 def handle_request_current_video():
@@ -299,7 +276,6 @@ def handle_request_current_video():
             )
     emit("update_list", video_list, broadcast=True)
 
-
 @socketio.on("sync_play_state")
 def handle_sync_play_state(data):
     global current_video_id, player_state
@@ -311,7 +287,6 @@ def handle_sync_play_state(data):
         broadcast=True,
     )
 
-
 @socketio.on("play_video")
 def handle_play_video(data):
     global current_video_id, player_state
@@ -319,13 +294,11 @@ def handle_play_video(data):
     player_state = "playing"
     emit("play_video", data, broadcast=True)
 
-
 @socketio.on("play_pause")
 def handle_play_pause():
     global player_state
     player_state = "paused" if player_state == "playing" else "playing"
     emit("toggle_play_pause", {"state": player_state}, broadcast=True)
-
 
 @socketio.on("change_volume")
 def handle_change_volume(data):
@@ -333,17 +306,14 @@ def handle_change_volume(data):
     current_volume = data["volume"]
     emit("update_volume", data, broadcast=True)
 
-
 @socketio.on("progress_update")
 def handle_progress_update(data):
     # Forward progress data so all clients (including phone) see it
     emit("progress_update", data, broadcast=True)
 
-
 @socketio.on("play_next_video")
 def handle_play_next_video():
     play_next_video()
-
 
 def play_next_video():
     global current_video_id, player_state
@@ -364,7 +334,6 @@ def play_next_video():
             {"video_id": current_video_id, "title": next_video["title"]},
             broadcast=True,
         )
-
 
 @socketio.on("seek_video")
 def handle_seek_video(data):
@@ -388,7 +357,6 @@ def handle_seek_video(data):
             except ValueError as e:
                 print(f"Error converting seek data: {e}")
 
-
 @app.route("/stream", methods=["POST"])
 def stream():
     try:
@@ -408,7 +376,6 @@ def stream():
             return jsonify({"stream_url": stream_url, "type": "audio"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 if __name__ == "__main__":
     local_ip = socket.gethostbyname(socket.gethostname())
