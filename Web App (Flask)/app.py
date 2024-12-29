@@ -379,7 +379,7 @@ def stream():
 
 if __name__ == "__main__":
     local_ip = socket.gethostbyname(socket.gethostname())
-    port = 7500
+    port = 5000
     print(
         f"Server is running at http://{local_ip}:{port}/ "
         f"(or http://0.0.0.0:{port}/ for all interfaces)"
