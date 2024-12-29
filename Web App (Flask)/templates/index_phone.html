@@ -26,6 +26,8 @@
       <div class="header">
         <!-- Title has been removed -->
       </div>
+
+      <!-- Now-Playing -->
       <div class="now-playing" id="now-playing">
         <p><span id="current-title">None</span></p>
         <div class="seek-bar">
@@ -33,6 +35,7 @@
           <input type="range" id="seek-slider" min="0" max="100" value="0" />
         </div>
       </div>
+
       <div class="controls-card">
         <div class="controls" id="controls">
           <div class="buttons">
@@ -41,7 +44,6 @@
             <button id="dark-mode-toggle" class="dark-mode-toggle">
               <i class="fas fa-moon"></i>
             </button>
-
             <div class="toggle-switch">
               <input
                 type="checkbox"
@@ -63,6 +65,16 @@
           </div>
         </div>
       </div>
+
+      <!-- 
+        REMOVE the phone <video> to avoid local playback 
+        (or just comment it out):
+        
+        <div class="video-container" style="display: none;">
+          <video id="player" ... ></video>
+        </div>
+      -->
+
       <div class="video-form-card">
         <form id="video-form" class="video-form">
           <input
@@ -75,6 +87,7 @@
           <div id="suggestions" class="suggestions"></div>
         </form>
       </div>
+
       <div class="playlist" id="playlist">
         {% for video in videos %}
         <div
@@ -97,6 +110,7 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.10.2/Sortable.min.js"></script>
+    <!-- Our updated phone script (below) -->
     <script src="{{ url_for('static', filename='js/script_phone.js') }}"></script>
   </body>
 </html>

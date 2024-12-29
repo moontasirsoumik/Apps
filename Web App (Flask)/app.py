@@ -11,7 +11,6 @@ app = Flask(__name__)
 app.config["SECRET_KEY"] = "your_secret_key"
 socketio = SocketIO(app, max_http_buffer_size=1000000)  # Adjust the size as needed
 
-
 video_list = []
 current_video_id = None
 player_state = "paused"
@@ -34,12 +33,10 @@ def home():
 def handle_new_video(data):
     try:
         if "list=" in data["link"]:
-            # This is a playlist link
             playlist = Playlist(data["link"])
             for url in playlist.video_urls:
                 add_video_to_list(url)
         else:
-            # This is a single video link
             add_video_to_list(data["link"])
     except Exception as e:
         print(f"Error adding video: {e}")
@@ -54,7 +51,6 @@ def add_video_to_list(url):
                 video_list.append(video)
                 emit("update_playlist", video, broadcast=True)
         else:
-            # For a single video
             video_id = extract_video_id(url)
             video_info = fetch_youtube_data(video_id)
             if video_info:
@@ -66,13 +62,11 @@ def add_video_to_list(url):
                 )
                 video_list.append(video_info)
                 emit("update_playlist", video_info, broadcast=True)
-
     except Exception as e:
         print(f"Error adding video: {e}")
 
 
 def extract_video_id(url):
-    """Extract the video ID from a YouTube URL."""
     if "v=" in url:
         return url.split("v=")[1].split("&")[0]
     elif "youtu.be/" in url:
@@ -81,17 +75,14 @@ def extract_video_id(url):
 
 
 def extract_playlist_id(url):
-    """Extract the playlist ID from a YouTube URL."""
     if "list=" in url:
         return url.split("list=")[1].split("&")[0]
     return None
 
 
 def fetch_youtube_data(video_id):
-    """Fetch detailed information for a single video using the YouTube Data API."""
     url = f"https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id={video_id}&key={YOUTUBE_API_KEY}"
     response = requests.get(url)
-
     if response.status_code == 200:
         data = response.json()
         if "items" in data and data["items"]:
@@ -102,10 +93,8 @@ def fetch_youtube_data(video_id):
             tags = snippet.get("tags", [])
             length = parse_duration(content_details["duration"])
 
-            # Ensure that title and thumbnail are retrieved correctly
             title = snippet.get("title", "Unknown Title")
             thumbnail = snippet.get("thumbnails", {}).get("high", {}).get("url", "")
-
             is_music = category_id == "10" or "music" in [tag.lower() for tag in tags]
 
             if is_music:
@@ -127,11 +116,9 @@ def fetch_youtube_data(video_id):
 
 
 def fetch_videos_from_playlist(playlist_id):
-    """Fetch all videos from a playlist using the YouTube Data API."""
     url = f"https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId={playlist_id}&maxResults=50&key={YOUTUBE_API_KEY}"
     response = requests.get(url)
-    video_list = []
-
+    video_list_local = []
     if response.status_code == 200:
         data = response.json()
         for item in data.get("items", []):
@@ -140,13 +127,12 @@ def fetch_videos_from_playlist(playlist_id):
             if video_info:
                 video_info.update(
                     {
-                        "id": len(video_list),
+                        "id": len(video_list_local),
                         "video_id": video_id,
                     }
                 )
-                video_list.append(video_info)
-
-    return video_list
+                video_list_local.append(video_info)
+    return video_list_local
 
 
 def parse_duration(duration):
@@ -165,10 +151,11 @@ def parse_duration(duration):
 
 @socketio.on("remove_video")
 def handle_remove_video(data):
-    video_id = data["id"]
     global video_list, current_video_id
+    video_id = data["id"]
     video_list = [video for video in video_list if video["id"] != video_id]
 
+    # If the current video was removed
     if current_video_id and any(video["id"] == video_id for video in video_list):
         current_video_id = None
         emit(
@@ -204,7 +191,6 @@ def handle_remove_video(data):
 @socketio.on("shuffle_playlist")
 def handle_shuffle_playlist():
     global video_list, current_video_id
-
     if current_video_id:
         current_index = next(
             (
@@ -214,7 +200,6 @@ def handle_shuffle_playlist():
             ),
             -1,
         )
-
         if current_index != -1:
             played_videos = video_list[: current_index + 1]
             unplayed_videos = video_list[current_index + 1 :]
@@ -222,9 +207,8 @@ def handle_shuffle_playlist():
             video_list = played_videos + unplayed_videos
     else:
         random.shuffle(video_list)
-
     emit("update_list", video_list, broadcast=True)
-    emit("playlist_shuffled", broadcast=True)  # Emit the shuffle notification event
+    emit("playlist_shuffled", broadcast=True)
 
 
 @socketio.on("reorder_videos")
@@ -297,6 +281,7 @@ def handle_change_volume(data):
 
 @socketio.on("progress_update")
 def handle_progress_update(data):
+    # Forward progress data so all clients (including phone) see it
     emit("progress_update", data, broadcast=True)
 
 
@@ -349,9 +334,32 @@ def handle_seek_video(data):
                 print(f"Error converting seek data: {e}")
 
 
+@app.route("/stream", methods=["POST"])
+def stream():
+    try:
+        data = request.get_json()
+        url = data.get("url")
+        if not url:
+            return jsonify({"error": "Invalid URL"}), 400
+
+        ydl_opts_audio = {
+            "format": "bestaudio/best",
+            "noplaylist": True,
+            "quiet": True,
+        }
+        with yt_dlp.YoutubeDL(ydl_opts_audio) as ydl:
+            info_dict = ydl.extract_info(url, download=False)
+            stream_url = info_dict["url"]
+            return jsonify({"stream_url": stream_url, "type": "audio"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 if __name__ == "__main__":
     local_ip = socket.gethostbyname(socket.gethostname())
+    port = 7500
     print(
-        f"Server is running at http://{local_ip}:5000/ (or http://0.0.0.0:5000/ for all interfaces)"
+        f"Server is running at http://{local_ip}:{port}/ "
+        f"(or http://0.0.0.0:{port}/ for all interfaces)"
     )
-    socketio.run(app, host="0.0.0.0", port=5000)
+    socketio.run(app, host="0.0.0.0", port=port)

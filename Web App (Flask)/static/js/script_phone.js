@@ -1,22 +1,25 @@
 let currentVideoId = null;
 let isSeeking = false;
-let videoDuration = 0;
+let videoDuration = 0; // We'll store the duration from the PC's updates
+let videoList = [];
 let suggestionOverlay = null;
 let suggestionsEnabled = true;
 let currentNotificationTimeout;
-let currentLink = ""; // Variable to store the full link
+let currentLink = "";
 let isSwiping = false;
 let swipeStartX = 0;
 let swipeStartY = 0;
-const swipeThreshold = 50; // Minimum distance in pixels to consider a swipe
-
+const swipeThreshold = 50;
 const socket = io();
-const YOUTUBE_API_KEY = "AIzaSyC-x1733bNl22rbecjJe6CNHhW62lIx_js"; // Ensure this matches your backend
+const YOUTUBE_API_KEY = "AIzaSyC-x1733bNl22rbecjJe6CNHhW62lIx_js"; // for suggestions
 
+//--------------------------------------------------------------------------
+// 1) Form Handling & Suggestions
+//--------------------------------------------------------------------------
 document.getElementById("video-form").addEventListener("submit", function (e) {
   e.preventDefault();
   const link = document.getElementById("youtube-link").value;
-  currentLink = link; // Store the full link
+  currentLink = link;
   socket.emit("new_video", { link });
   document.getElementById("youtube-link").value = "";
   hideSuggestions();
@@ -30,6 +33,20 @@ document.getElementById("youtube-link").addEventListener("input", function () {
     hideSuggestions();
   }
 });
+
+function scrollToPlayingSong() {
+  if (currentVideoId) {
+    const currentVideoElement = document.querySelector(
+      `.video-item[data-video-id="${currentVideoId}"]`
+    );
+    if (currentVideoElement) {
+      currentVideoElement.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }
+  }
+}
 
 function fetchSuggestions(query) {
   const suggestionsUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=5&q=${query}&key=${YOUTUBE_API_KEY}&type=video`;
@@ -51,20 +68,6 @@ function fetchSuggestions(query) {
       showError("Failed to fetch suggestions. Please try again.");
       hideSuggestions();
     });
-}
-
-function scrollToPlayingSong() {
-  if (currentVideoId) {
-    const currentVideoElement = document.querySelector(
-      `.video-item[data-video-id="${currentVideoId}"]`
-    );
-    if (currentVideoElement) {
-      currentVideoElement.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
-    }
-  }
 }
 
 function showSuggestions(suggestions) {
@@ -106,7 +109,7 @@ function hideSuggestions() {
 function positionSuggestions() {
   const inputBox = document.getElementById("youtube-link");
   const rect = inputBox.getBoundingClientRect();
-  const suggestionOverlay = document.getElementById("suggestion-overlay");
+  if (!suggestionOverlay) return;
   suggestionOverlay.style.left = `${rect.left}px`;
   suggestionOverlay.style.top = `${rect.bottom + window.scrollY}px`;
   suggestionOverlay.style.width = `${rect.width}px`;
@@ -115,24 +118,31 @@ function positionSuggestions() {
 function selectSuggestion(videoId, title) {
   document.getElementById("youtube-link").value = title;
   hideSuggestions();
-  currentLink = `https://www.youtube.com/watch?v=${videoId}`; // Store the full link
+  currentLink = `https://www.youtube.com/watch?v=${videoId}`;
   socket.emit("new_video", { link: currentLink });
 }
 
 window.addEventListener("resize", positionSuggestions);
 
+//--------------------------------------------------------------------------
+// 2) Socket.IO Event Handlers (Phone as Remote)
+//--------------------------------------------------------------------------
 socket.on("update_playlist", function (data) {
   addVideoToList(data);
-  highlightCurrentVideo(currentVideoId);
+  videoList.push(data);
   showNotification(getNotificationMessage(currentLink));
 });
 
 socket.on("update_list", function (data) {
+  videoList = data;
   updatePlaylist(data);
   highlightCurrentVideo(currentVideoId);
-  // No notification needed here since individual video notifications will be handled by update_playlist
 });
 
+/**
+ * The PC says "play_video with this ID".
+ * Phone just updates local UI to show it's playing.
+ */
 socket.on("play_video", function (data) {
   currentVideoId = data.video_id;
   highlightCurrentVideo(data.video_id);
@@ -141,32 +151,52 @@ socket.on("play_video", function (data) {
   showNotification("Playing");
 });
 
+/**
+ * The server toggled global play/pause.
+ * Update phone UI only.
+ */
 socket.on("toggle_play_pause", (data) => {
   updatePlayPauseButton(data.state);
   showNotification(data.state === "playing" ? "Playing" : "Paused");
 });
 
+/**
+ * Another user changed the play state.
+ * Phone updates UI.
+ */
 socket.on("sync_play_state", (data) => {
   currentVideoId = data.video_id;
   updatePlayPauseButton(data.state);
   highlightCurrentVideo(data.video_id);
   updateCurrentTitle(data.video_id);
+  showNotification(data.state === "playing" ? "Playing" : "Paused");
 });
 
+/**
+ * Global volume changed. Phone updates its slider only.
+ */
 socket.on("update_volume", (data) => {
-  document.getElementById("volume-slider").value = data.volume;
-  showVolumeOverlay(data.volume);
+  const volume = data.volume;
+  document.getElementById("volume-slider").value = volume;
+  showVolumeOverlay(volume);
 });
 
+/**
+ * The server is telling phone the current video details.
+ */
 socket.on("current_video", (data) => {
   currentVideoId = data.video_id;
-  updateCurrentTitle(currentVideoId);
-  highlightCurrentVideo(currentVideoId);
+  updateCurrentTitle(data.video_id);
+  highlightCurrentVideo(data.video_id);
   updatePlayPauseButton(data.state === "playing" ? "playing" : "paused");
+  const vol = parseInt(data.volume) || 10;
+  document.getElementById("volume-slider").value = vol;
   scrollToPlayingSong();
 });
 
-// Update the player progress and handle seeking
+/**
+ * The PC sends progress updates, which we use to set phone's seek slider.
+ */
 socket.on("progress_update", function (data) {
   if (!isSeeking) {
     const { currentTime, duration } = data;
@@ -176,99 +206,98 @@ socket.on("progress_update", function (data) {
   }
 });
 
+/**
+ * A global "seek_video" event. If not seeking locally, update phone slider.
+ */
 socket.on("seek_video", function (data) {
-  if (!isSeeking) {
-    const progressPercent = (data.time / videoDuration) * 100;
-    document.getElementById("seek-slider").value = progressPercent;
+  if (!isSeeking && data.video_id === currentVideoId) {
+    const { time } = data;
+    const duration = videoDuration;
+    if (duration > 0) {
+      const progressPercent = (time / duration) * 100;
+      document.getElementById("seek-slider").value = progressPercent;
+    }
   }
 });
 
-// Handle the slider input for seeking
-document.getElementById("seek-slider").addEventListener("input", function (e) {
-  isSeeking = true;
-  const value = e.target.value;
-  const seekTime = (value / 100) * videoDuration;
-
-  // Format the seek time and display it as an overlay
-  const formattedSeekTime = formatTime(seekTime);
-  const formattedDuration = formatTime(videoDuration);
-  const seekTimeOverlay = document.getElementById("seek-time");
-  seekTimeOverlay.textContent = `${formattedSeekTime} / ${formattedDuration}`;
-  seekTimeOverlay.style.display = "block";
-
-  // Emit the seek event to the server
-  socket.emit("seek_video", { percent: value });
+socket.on("playlist_shuffled", () => {
+  showNotification("Playlist Shuffled");
 });
 
-document.getElementById("seek-slider").addEventListener("change", function () {
+//--------------------------------------------------------------------------
+// 3) No local playback on phone, so no loadAndPlayVideo or <video> usage
+//--------------------------------------------------------------------------
+
+//--------------------------------------------------------------------------
+// 4) Seek Bar Handling (remote style)
+//--------------------------------------------------------------------------
+const seekSlider = document.getElementById("seek-slider");
+seekSlider.addEventListener("input", function (e) {
+  isSeeking = true;
+  const value = parseFloat(e.target.value);
+  if (videoDuration > 0) {
+    const seekTime = (value / 100) * videoDuration;
+    const formattedSeekTime = formatTime(seekTime);
+    const formattedDuration = formatTime(videoDuration);
+    const seekTimeOverlay = document.getElementById("seek-time");
+    seekTimeOverlay.textContent = `${formattedSeekTime} / ${formattedDuration}`;
+    seekTimeOverlay.style.display = "block";
+  }
+});
+
+seekSlider.addEventListener("change", function (e) {
   isSeeking = false;
   document.getElementById("seek-time").style.display = "none";
+  if (videoDuration > 0) {
+    const value = parseFloat(e.target.value);
+    socket.emit("seek_video", { percent: value });
+  }
 });
 
-function formatTime(seconds) {
-  const hrs = Math.floor(seconds / 3600);
-  const mins = Math.floor((seconds % 3600) / 60);
-  const secs = Math.floor(seconds % 60);
-  return hrs > 0
-    ? `${hrs}:${mins.toString().padStart(2, "0")}:${secs
-        .toString()
-        .padStart(2, "0")}`
-    : `${mins}:${secs.toString().padStart(2, "0")}`;
-}
+//--------------------------------------------------------------------------
+// 5) Controls: Play/Pause, Shuffle, Volume => just emit to server
+//--------------------------------------------------------------------------
 
-// Suggestions toggle
-document
-  .getElementById("suggestions-toggle")
-  .addEventListener("change", (event) => {
-    suggestionsEnabled = event.target.checked;
-    localStorage.setItem("suggestionsEnabled", suggestionsEnabled);
-    showNotification(suggestionsEnabled ? "Suggestions On" : "Suggestions Off");
-  });
-
-// Initialize state
-window.addEventListener("load", () => {
-  const isDarkMode = localStorage.getItem("darkMode") === "true";
-  suggestionsEnabled = localStorage.getItem("suggestionsEnabled") === "true";
-  if (isDarkMode) {
-    document.body.classList.add("dark-mode");
-    document
-      .getElementById("dark-mode-toggle")
-      .querySelector("i")
-      .classList.replace("fa-moon", "fa-sun");
-  }
-  document.getElementById("suggestions-toggle").checked = suggestionsEnabled;
+document.getElementById("play-pause-btn").addEventListener("click", () => {
+  socket.emit("play_pause");
   socket.emit("request_current_video");
 });
 
+document.getElementById("shuffle-btn").addEventListener("click", () => {
+  socket.emit("shuffle_playlist");
+});
+
+document.getElementById("volume-slider").addEventListener("input", function () {
+  const volume = this.value;
+  socket.emit("change_volume", { volume });
+  showVolumeOverlay(volume);
+});
+
+//--------------------------------------------------------------------------
+// 6) Playlist, Swiping, Sorting
+//--------------------------------------------------------------------------
 function addVideoToList(video) {
   const playlist = document.getElementById("playlist");
   const videoItem = document.createElement("div");
   videoItem.className = "video-item unselectable";
   videoItem.setAttribute("data-id", video.id);
   videoItem.setAttribute("data-video-id", video.video_id);
-  videoItem.setAttribute(
-    "data-url",
-    `https://www.youtube.com/watch?v=${video.video_id}`
-  );
   videoItem.innerHTML = `
-      <img class="drag-area" src="${video.thumbnail}" alt="${video.title}">
-      <div class="video-info">
-          <p class="video-title"><strong>${video.title}</strong></p>
-          <p class="video-meta">${
-            video.artist
-              ? "Artist: " + video.artist
-              : "Creator: " + video.creator
-          }</p>
-          ${
-            video.album ? `<p class="video-meta">Album: ${video.album}</p>` : ""
-          }
-          <p class="video-meta">Length: ${formatDuration(video.length)}</p>
-      </div>
+    <img class="drag-area" src="${video.thumbnail}" alt="${video.title}">
+    <div class="video-info">
+      <p class="video-title"><strong>${video.title}</strong></p>
+      <p class="video-meta">${
+        video.artist ? "Artist: " + video.artist : "Creator: " + video.creator
+      }</p>
+      ${video.album ? `<p class="video-meta">Album: ${video.album}</p>` : ""}
+      <p class="video-meta">Length: ${formatDuration(video.length)}</p>
+    </div>
   `;
   playlist.appendChild(videoItem);
   attachClickListener(videoItem);
   attachSwipeListener(videoItem);
-  attachLongPressListener(videoItem); // Add long-press listener
+  attachLongPressListener(videoItem);
+  updateContainerSize();
 }
 
 function updatePlaylist(videos) {
@@ -279,43 +308,13 @@ function updatePlaylist(videos) {
 }
 
 function attachClickListener(videoItem) {
-  let longPressTimer;
-
-  // Handle touchstart for mobile long-press
-  videoItem.addEventListener("touchstart", function (e) {
-    longPressTimer = setTimeout(() => {
-      e.preventDefault(); // Prevent default text selection
-      const videoId = videoItem.getAttribute("data-video-id");
-      const video = videoList.find((v) => v.video_id === videoId);
-      if (video) {
-        showContextMenu(
-          videoItem,
-          `https://www.youtube.com/watch?v=${video.video_id}`
-        );
-      }
-    }, 500); // Duration to trigger long-press
-  });
-
-  // Cancel the long-press if the touch ends or moves out of the card
-  videoItem.addEventListener("touchend", function () {
-    clearTimeout(longPressTimer);
-  });
-  videoItem.addEventListener("touchmove", function () {
-    clearTimeout(longPressTimer);
-  });
-
-  // Suppress the default context menu on right-click/long-press
-  videoItem.addEventListener("contextmenu", function (e) {
-    e.preventDefault();
-  });
-
-  // Regular click to play/pause or select a new video
   videoItem.addEventListener("click", function () {
     const videoId = videoItem.getAttribute("data-video-id");
-
     if (videoId === currentVideoId) {
+      // If same video tapped, toggle play/pause
       socket.emit("play_pause");
     } else {
+      // A new video -> ask server to play it on PC
       socket.emit("play_video", { video_id: videoId });
     }
   });
@@ -335,51 +334,44 @@ function attachSwipeListener(videoItem) {
 
   videoItem.addEventListener("touchmove", function (e) {
     if (!isSwiping) return;
-
     const swipeEndX = e.touches[0].clientX;
     const swipeEndY = e.touches[0].clientY;
     const deltaX = swipeEndX - swipeStartX;
     const deltaY = swipeEndY - swipeStartY;
 
-    // Check if the movement is primarily horizontal and significant enough
     if (
       Math.abs(deltaX) > Math.abs(deltaY) &&
       Math.abs(deltaX) > swipeThreshold
     ) {
-      e.preventDefault(); // Prevent vertical scroll
+      e.preventDefault();
       videoItem.style.transform = `translateX(${deltaX}px)`;
     }
   });
 
   videoItem.addEventListener("touchend", function (e) {
     if (!isSwiping) return;
-
     const swipeEndX = e.changedTouches[0].clientX;
     const deltaX = swipeEndX - swipeStartX;
-    isSwiping = false; // Reset swiping state
-
+    isSwiping = false;
     if (Math.abs(deltaX) > swipeThreshold) {
       if (deltaX < 0) {
-        // Swipe left to delete
+        // Swipe left => remove
         videoItem.style.transition =
           "transform 0.3s ease-out, background-color 0.3s ease-out";
         videoItem.style.transform = "translateX(-100%)";
         videoItem.style.backgroundColor = "red";
         setTimeout(() => {
-          const videoId = videoItem.getAttribute("data-video-id");
-          videoItem.remove();
           socket.emit("remove_video", {
             id: parseInt(videoItem.getAttribute("data-id")),
           });
+          videoItem.remove();
           showNotification("Video Removed");
         }, 300);
       } else {
-        // Swipe right - reset position or add custom action if needed
         videoItem.style.transition = "transform 0.3s ease-out";
         videoItem.style.transform = "translateX(0)";
       }
     } else {
-      // Not enough swipe distance, reset position
       videoItem.style.transition = "transform 0.3s ease-out";
       videoItem.style.transform = "translateX(0)";
     }
@@ -387,32 +379,8 @@ function attachSwipeListener(videoItem) {
 
   videoItem.addEventListener("touchcancel", function () {
     isSwiping = false;
-    videoItem.style.transform = "translateX(0)"; // Reset position
+    videoItem.style.transform = "translateX(0)";
   });
-}
-
-function handleSwipe(videoItem) {
-  const swipeDistance = swipeStartX - swipeEndX;
-
-  if (swipeDistance > swipeThreshold) {
-    // Swipe left detected
-    const videoId = videoItem.getAttribute("data-video-id");
-    if (videoId !== currentVideoId) {
-      videoItem.style.transition =
-        "transform 0.3s ease-out, background-color 0.3s ease-out";
-      videoItem.style.transform = "translateX(-100%)";
-      videoItem.style.backgroundColor = "red";
-      setTimeout(() => {
-        videoItem.remove();
-        socket.emit("remove_video", {
-          id: parseInt(videoItem.getAttribute("data-id")),
-        });
-        showNotification("Video Removed");
-      }, 300);
-    } else {
-      showNotification("Cannot remove the playing video");
-    }
-  }
 }
 
 const sortable = new Sortable(document.getElementById("playlist"), {
@@ -431,69 +399,9 @@ const sortable = new Sortable(document.getElementById("playlist"), {
   },
 });
 
-function highlightCurrentVideo(videoId) {
-  document.querySelectorAll(".video-item").forEach((item) => {
-    item.classList.toggle(
-      "playing",
-      item.getAttribute("data-video-id") === videoId
-    );
-  });
-}
-
-document.getElementById("play-pause-btn").addEventListener("click", () => {
-  socket.emit("play_pause"); // Toggle play/pause on the server
-  socket.emit("request_current_video"); // Request the current state for synchronization
-});
-
-document.getElementById("volume-slider").addEventListener("input", function () {
-  const volume = this.value;
-  socket.emit("change_volume", { volume });
-  showVolumeOverlay(volume);
-});
-
-document
-  .getElementById("volume-slider")
-  .addEventListener("touchstart", function () {
-    isTouchingVolumeSlider = true;
-  });
-
-// Volume slider handling
-document
-  .getElementById("volume-slider")
-  .addEventListener("touchend", function () {
-    isTouchingVolumeSlider = false;
-    hideVolumeOverlay();
-  });
-
-function showVolumeOverlay(volume) {
-  let volumeOverlay = document.getElementById("volume-overlay");
-  if (!volumeOverlay) {
-    volumeOverlay = document.createElement("div");
-    volumeOverlay.id = "volume-overlay";
-    document.body.appendChild(volumeOverlay);
-  }
-  volumeOverlay.textContent = `Volume: ${volume}%`;
-  volumeOverlay.className = "show";
-
-  const volumeSlider = document.getElementById("volume-slider");
-  const rect = volumeSlider.getBoundingClientRect();
-  const overlayRect = volumeOverlay.getBoundingClientRect();
-
-  volumeOverlay.style.left = `${
-    rect.left + rect.width / 2 - overlayRect.width / 2
-  }px`;
-  volumeOverlay.style.top = `${rect.top - overlayRect.height - 10}px`;
-}
-
-function hideVolumeOverlay() {
-  if (!isTouchingVolumeSlider) {
-    const volumeOverlay = document.getElementById("volume-overlay");
-    if (volumeOverlay) {
-      volumeOverlay.className = volumeOverlay.className.replace("show", "");
-    }
-  }
-}
-
+//--------------------------------------------------------------------------
+// 7) Dark Mode & Suggestions Toggle
+//--------------------------------------------------------------------------
 document.getElementById("dark-mode-toggle").addEventListener("click", () => {
   document.body.classList.toggle("dark-mode");
   const icon = document.getElementById("dark-mode-toggle").querySelector("i");
@@ -534,13 +442,17 @@ window.addEventListener("load", () => {
   socket.emit("request_current_video");
 });
 
-document.getElementById("shuffle-btn").addEventListener("click", () => {
-  socket.emit("shuffle_playlist");
-});
-
-socket.on("playlist_shuffled", () => {
-  showNotification("Playlist Shuffled");
-});
+//--------------------------------------------------------------------------
+// 8) Utility Functions
+//--------------------------------------------------------------------------
+function highlightCurrentVideo(videoId) {
+  document.querySelectorAll(".video-item").forEach((item) => {
+    item.classList.toggle(
+      "playing",
+      item.getAttribute("data-video-id") === videoId
+    );
+  });
+}
 
 function updateCurrentTitle(videoId) {
   const currentItem = Array.from(document.querySelectorAll(".video-item")).find(
@@ -555,11 +467,11 @@ function updateCurrentTitle(videoId) {
 }
 
 function updatePlayPauseButton(state) {
-  const playPauseBtn = document.getElementById("play-pause-btn");
+  const btn = document.getElementById("play-pause-btn");
   if (state === "playing") {
-    playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+    btn.innerHTML = '<i class="fas fa-pause"></i>';
   } else {
-    playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+    btn.innerHTML = '<i class="fas fa-play"></i>';
   }
 }
 
@@ -568,6 +480,17 @@ function formatDuration(seconds) {
   const mins = Math.floor((seconds % 3600) / 60);
   const secs = seconds % 60;
   return `${hrs ? hrs + ":" : ""}${mins}:${secs < 10 ? "0" : ""}${secs}`;
+}
+
+function formatTime(time) {
+  const hrs = Math.floor(time / 3600);
+  const mins = Math.floor((time % 3600) / 60);
+  const secs = Math.floor(time % 60);
+  return hrs > 0
+    ? `${hrs}:${mins.toString().padStart(2, "0")}:${secs
+        .toString()
+        .padStart(2, "0")}`
+    : `${mins}:${secs.toString().padStart(2, "0")}`;
 }
 
 function showNotification(message) {
@@ -579,8 +502,6 @@ function showNotification(message) {
   }
   notification.textContent = message;
   notification.className = "show";
-
-  const overlayRect = notification.getBoundingClientRect();
   notification.style.left = `50%`;
   notification.style.transform = `translateX(-50%)`;
   notification.style.bottom = `20px`;
@@ -593,32 +514,45 @@ function showNotification(message) {
 
 function getNotificationMessage(link) {
   if (!link) {
-    console.log("No link provided, defaulting to 'Content Added'");
     return "Content Added";
   }
-
-  console.log("Determining message for link:", link);
-
   if (link.includes("list=")) {
-    console.log("Playlist detected");
     return "Playlist Added";
   } else if (link.includes("music.youtube.com")) {
-    console.log("Music detected");
     return "Music Added";
   } else if (link.includes("youtube.com") || link.includes("youtu.be")) {
-    console.log("Video detected");
     return "Video Added";
   }
-
-  console.log("Fallback content added");
   return "Content Added";
+}
+
+function showVolumeOverlay(volume) {
+  let volumeOverlay = document.getElementById("volume-overlay");
+  if (!volumeOverlay) {
+    volumeOverlay = document.createElement("div");
+    volumeOverlay.id = "volume-overlay";
+    document.body.appendChild(volumeOverlay);
+  }
+  volumeOverlay.textContent = `Volume: ${volume}%`;
+  volumeOverlay.className = "show";
+
+  const volumeSlider = document.getElementById("volume-slider");
+  const rect = volumeSlider.getBoundingClientRect();
+  const overlayRect = volumeOverlay.getBoundingClientRect();
+  volumeOverlay.style.left = `${
+    rect.left + rect.width / 2 - overlayRect.width / 2
+  }px`;
+  volumeOverlay.style.top = `${rect.top - overlayRect.height - 10}px`;
+
+  setTimeout(() => {
+    volumeOverlay.className = volumeOverlay.className.replace("show", "");
+  }, 1000);
 }
 
 function updateContainerSize() {
   const container = document.querySelector(".container");
   const playlist = document.querySelector(".playlist");
   const items = playlist.children;
-
   if (items.length === 0) {
     container.classList.add("empty-container");
     container.classList.remove("full-container");
@@ -627,22 +561,26 @@ function updateContainerSize() {
     container.classList.add("full-container");
   }
 }
-
-// Initial call to set the size based on the current state
 updateContainerSize();
-
-// Example function to add video to the playlist
-function addVideo(videoElement) {
-  const playlist = document.querySelector(".playlist");
-  playlist.appendChild(videoElement);
-  updateContainerSize();
-}
-
-// Attach resize event listener if needed for dynamic adjustments
 window.addEventListener("resize", updateContainerSize);
 
+// If you still want the long-press context menu for "Copy Link," keep it:
+function attachLongPressListener(videoItem) {
+  let longPressTimeout;
+  videoItem.addEventListener("touchstart", function (e) {
+    longPressTimeout = setTimeout(() => {
+      e.preventDefault();
+      showContextMenu(videoItem, e.touches[0].clientX, e.touches[0].clientY);
+    }, 500);
+  });
+  videoItem.addEventListener("touchend", () => clearTimeout(longPressTimeout));
+  videoItem.addEventListener("touchmove", () => clearTimeout(longPressTimeout));
+  videoItem.addEventListener("touchcancel", () =>
+    clearTimeout(longPressTimeout)
+  );
+}
+
 function showContextMenu(videoItem, x, y) {
-  // Remove any existing context menu to avoid duplicates
   const existingMenu = document.getElementById("context-menu");
   if (existingMenu) existingMenu.remove();
 
@@ -656,36 +594,26 @@ function showContextMenu(videoItem, x, y) {
   `;
   document.body.appendChild(contextMenu);
 
-  // Measure menu height after it's in the DOM
   const menuHeight = contextMenu.offsetHeight;
-
-  // Position the context menu above the touch point
   contextMenu.style.left = `${x - 50}px`;
   contextMenu.style.top = `${y - 70 - menuHeight}px`;
   contextMenu.style.display = "block";
 
-  // Add an event listener to close the context menu on any touch or click outside
   setTimeout(() => {
     document.addEventListener("touchstart", handleOutsideTouch, { once: true });
     document.addEventListener("click", handleOutsideClick, { once: true });
   }, 0);
 }
 
-// Function to handle clicks outside the context menu
 function handleOutsideClick(event) {
   const contextMenu = document.getElementById("context-menu");
-
-  // Check if the click was outside the context menu
   if (contextMenu && !contextMenu.contains(event.target)) {
     hideContextMenu();
   }
 }
 
-// Function to handle touch events outside the context menu
 function handleOutsideTouch(event) {
   const contextMenu = document.getElementById("context-menu");
-
-  // Check if the touch was outside the context menu
   if (contextMenu && !contextMenu.contains(event.target)) {
     hideContextMenu();
   }
@@ -696,58 +624,28 @@ function hideContextMenu() {
   if (contextMenu) contextMenu.remove();
 }
 
-function attachLongPressListener(videoItem) {
-  let longPressTimeout;
-
-  videoItem.addEventListener("touchstart", function (e) {
-    longPressTimeout = setTimeout(() => {
-      e.preventDefault();
-      showContextMenu(videoItem, e.touches[0].clientX, e.touches[0].clientY);
-    }, 500); // 0.5-second delay for long-press
-  });
-
-  videoItem.addEventListener("touchend", () => clearTimeout(longPressTimeout));
-  videoItem.addEventListener("touchmove", () => clearTimeout(longPressTimeout));
-  videoItem.addEventListener("touchcancel", () =>
-    clearTimeout(longPressTimeout)
-  );
-}
-
 function copyToClipboard(text) {
   if (navigator.clipboard) {
     navigator.clipboard
       .writeText(text)
       .then(() => {
         showNotification("Link copied to clipboard");
-        hideContextMenu(); // Hide the context menu after copying
+        hideContextMenu();
       })
       .catch((err) => {
         showNotification("Failed to copy link");
         console.error("Error copying link: ", err);
       });
   } else {
-    // Fallback for older browsers
-    const textarea = document.createElement("textarea");
-    textarea.value = text;
-    document.body.appendChild(textarea);
-    textarea.select();
-    try {
-      document.execCommand("copy");
-      showNotification("Link copied to clipboard");
-    } catch (err) {
-      showNotification("Failed to copy link");
-      console.error("Error copying link: ", err);
-    }
-    document.body.removeChild(textarea);
-    hideContextMenu(); // Hide the context menu after copying
+    showFallbackCopy(text);
   }
 }
-// Fallback copy method
+
 function showFallbackCopy(text) {
   const textarea = document.createElement("textarea");
   textarea.value = text;
-  textarea.style.position = "fixed"; // Avoid scrolling to bottom
-  textarea.style.opacity = "0"; // Make it invisible
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
   document.body.appendChild(textarea);
   textarea.focus();
   textarea.select();
@@ -755,7 +653,7 @@ function showFallbackCopy(text) {
   try {
     const successful = document.execCommand("copy");
     if (successful) {
-      showNotification("Link copied to clipboard!");
+      showNotification("Link copied to clipboard");
     } else {
       showNotification("Failed to copy link");
     }
@@ -763,7 +661,6 @@ function showFallbackCopy(text) {
     console.error("Fallback copy error:", err);
     showNotification("Failed to copy link");
   }
-
   document.body.removeChild(textarea);
   hideContextMenu();
 }

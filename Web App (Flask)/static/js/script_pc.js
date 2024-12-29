@@ -8,16 +8,24 @@ let currentLink = "";
 let isSwiping = false;
 let swipeStartX = 0;
 let swipeStartY = 0;
-const swipeThreshold = 50; // Minimum distance in pixels to consider a swipe
+const swipeThreshold = 50;
+
+// --- Now defaulting to 20% volume. ---
 let current_volume = 20;
+let isSeeking = false;
 
 const socket = io();
-const YOUTUBE_API_KEY = "AIzaSyC-x1733bNl22rbecjJe6CNHhW62lIx_js"; // Ensure this matches your backend
+const YOUTUBE_API_KEY = "AIzaSyC-x1733bNl22rbecjJe6CNHhW62lIx_js";
+player = document.getElementById("player"); // <audio> element
+let hasUserInteracted = false;
 
+//---------------------------------------------------------------------
+// 1) Video Form & Suggestions
+//---------------------------------------------------------------------
 document.getElementById("video-form").addEventListener("submit", function (e) {
   e.preventDefault();
   const link = document.getElementById("youtube-link").value;
-  currentLink = link; // Store the full link
+  currentLink = link;
   socket.emit("new_video", { link });
   document.getElementById("youtube-link").value = "";
   hideSuggestions();
@@ -102,12 +110,13 @@ function positionSuggestions() {
 function selectSuggestion(videoId, title) {
   document.getElementById("youtube-link").value = title;
   hideSuggestions();
-  currentLink = `https://www.youtube.com/watch?v=${videoId}`; // Store the full link
+  currentLink = `https://www.youtube.com/watch?v=${videoId}`;
   socket.emit("new_video", { link: currentLink });
 }
 
-window.addEventListener("resize", positionSuggestions);
-
+//---------------------------------------------------------------------
+// 2) Socket.IO Event Handlers
+//---------------------------------------------------------------------
 socket.on("update_playlist", function (data) {
   addVideoToList(data);
   videoList.push(data);
@@ -118,15 +127,178 @@ socket.on("update_list", function (data) {
   updatePlaylist(data);
   videoList = data;
   highlightCurrentVideo(currentVideoId);
-  // No notification needed here since individual video notifications will be handled by update_playlist
 });
 
-socket.on("play_video", function (data) {
+socket.on("play_video", async function (data) {
   currentVideoId = data.video_id;
-  playVideoById(data.video_id);
   showNotification("Playing");
+  await loadAndPlayVideo(currentVideoId);
 });
 
+socket.on("toggle_play_pause", (data) => {
+  if (data.state === "playing") {
+    player.play().catch((err) => {
+      console.warn("Autoplay blocked or first interaction not done:", err);
+      showNotification(
+        "Please click on this page to allow audio, then press play again."
+      );
+    });
+    showNotification("Playing");
+  } else {
+    player.pause();
+    showNotification("Paused");
+  }
+  updatePlayPauseButton(data.state);
+});
+
+socket.on("sync_play_state", (data) => {
+  currentVideoId = data.video_id;
+  if (data.state === "playing") {
+    player.play().catch((err) => {
+      console.warn("Autoplay blocked or first interaction not done:", err);
+      showNotification(
+        "Please click on this page to allow audio, then press play again."
+      );
+    });
+    showNotification("Playing");
+  } else {
+    player.pause();
+    showNotification("Paused");
+  }
+  updatePlayPauseButton(data.state);
+});
+
+socket.on("update_volume", (data) => {
+  if (player) {
+    player.volume = data.volume / 100;
+  }
+  document.getElementById("volume-slider").value = data.volume;
+  showVolumeOverlay(data.volume);
+});
+
+socket.on("current_video", (data) => {
+  currentVideoId = data.video_id;
+  updateCurrentTitle(currentVideoId);
+  highlightCurrentVideo(currentVideoId);
+  updatePlayPauseButton(data.state);
+  if (player) {
+    player.volume = data.volume / 100;
+    document.getElementById("volume-slider").value = data.volume;
+  }
+});
+
+socket.on("progress_update", function (data) {
+  if (!isSeeking && player && !player.paused) {
+    const { currentTime, duration } = data;
+    const progressPercent = (currentTime / duration) * 100;
+    document.getElementById(
+      "progress-bar-inner"
+    ).style.width = `${progressPercent}%`;
+  }
+});
+
+socket.on("seek_video", function (data) {
+  if (currentVideoId === data.video_id && player) {
+    player.currentTime = data.time;
+  }
+});
+
+socket.on("playlist_shuffled", () => {
+  showNotification("Playlist Shuffled");
+});
+
+//---------------------------------------------------------------------
+// 3) Audio Playback (HTML5 Audio)
+//---------------------------------------------------------------------
+async function loadAndPlayVideo(videoId) {
+  const videoInfo = videoList.find((v) => v.video_id === videoId);
+  if (!videoInfo) {
+    console.log("Audio not found in playlist.");
+    return;
+  }
+
+  let streamUrl = "";
+  try {
+    const response = await fetch("/stream", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        url: `https://www.youtube.com/watch?v=${videoId}`,
+      }),
+    });
+    const data = await response.json();
+
+    if (data.error) {
+      console.error("Error getting stream URL:", data.error);
+      showNotification("Failed to load audio stream.");
+      return;
+    }
+    streamUrl = data.stream_url;
+  } catch (err) {
+    console.error("Error fetching /stream:", err);
+    showNotification("Failed to fetch stream.");
+    return;
+  }
+
+  player.src = streamUrl;
+  updateCurrentTitle(videoId);
+  highlightCurrentVideo(videoId);
+
+  try {
+    await player.play();
+    updatePlayPauseButton("playing");
+  } catch (err) {
+    console.warn("Autoplay blocked or first interaction required:", err);
+    showNotification(
+      "Please click on this page (e.g. press Play button here) to allow audio."
+    );
+    updatePlayPauseButton("paused");
+  }
+}
+
+if (player) {
+  // If user manually interacts with the audio on PC, we consider that a user gesture
+  player.addEventListener("play", () => {
+    hasUserInteracted = true;
+    socket.emit("sync_play_state", {
+      video_id: currentVideoId,
+      state: "playing",
+    });
+    updatePlayPauseButton("playing");
+  });
+
+  player.addEventListener("pause", () => {
+    if (hasUserInteracted) {
+      socket.emit("sync_play_state", {
+        video_id: currentVideoId,
+        state: "paused",
+      });
+    }
+    updatePlayPauseButton("paused");
+  });
+
+  player.addEventListener("timeupdate", () => {
+    if (!isSeeking) {
+      const duration = player.duration || 0;
+      const currentTime = player.currentTime;
+      if (duration > 0) {
+        const progressPercent = (currentTime / duration) * 100;
+        document.getElementById(
+          "progress-bar-inner"
+        ).style.width = `${progressPercent}%`;
+        socket.emit("progress_update", { currentTime, duration });
+      }
+    }
+  });
+
+  player.addEventListener("ended", () => {
+    socket.emit("play_next_video");
+  });
+}
+
+//---------------------------------------------------------------------
+// 4) Playlist-Related
+//---------------------------------------------------------------------
 function addVideoToList(video) {
   const playlist = document.getElementById("playlist");
   const videoItem = document.createElement("div");
@@ -134,22 +306,16 @@ function addVideoToList(video) {
   videoItem.setAttribute("data-id", video.id);
   videoItem.setAttribute("data-video-id", video.video_id);
   videoItem.innerHTML = `
-        <img class="drag-area" src="${video.thumbnail}" alt="${video.title}">
-        <div class="video-info">
-            <p class="video-title"><strong>${video.title}</strong></p>
-            <p class="video-meta">${
-              video.artist
-                ? "Artist: " + video.artist
-                : "Creator: " + video.creator
-            }</p>
-            ${
-              video.album
-                ? `<p class="video-meta">Album: ${video.album}</p>`
-                : ""
-            }
-            <p class="video-meta">Length: ${formatDuration(video.length)}</p>
-        </div>
-    `;
+    <img class="drag-area" src="${video.thumbnail}" alt="${video.title}">
+    <div class="video-info">
+      <p class="video-title"><strong>${video.title}</strong></p>
+      <p class="video-meta">${
+        video.artist ? "Artist: " + video.artist : "Creator: " + video.creator
+      }</p>
+      ${video.album ? `<p class="video-meta">Album: ${video.album}</p>` : ""}
+      <p class="video-meta">Length: ${formatDuration(video.length)}</p>
+    </div>
+  `;
   playlist.appendChild(videoItem);
   attachClickListener(videoItem);
   attachSwipeListener(videoItem);
@@ -183,51 +349,42 @@ function attachSwipeListener(videoItem) {
 
   videoItem.addEventListener("touchmove", function (e) {
     if (!isSwiping) return;
-
     const swipeEndX = e.touches[0].clientX;
     const swipeEndY = e.touches[0].clientY;
     const deltaX = swipeEndX - swipeStartX;
     const deltaY = swipeEndY - swipeStartY;
-
-    // Check if the movement is primarily horizontal and significant enough
     if (
       Math.abs(deltaX) > Math.abs(deltaY) &&
       Math.abs(deltaX) > swipeThreshold
     ) {
-      e.preventDefault(); // Prevent vertical scroll
+      e.preventDefault();
       videoItem.style.transform = `translateX(${deltaX}px)`;
     }
   });
 
   videoItem.addEventListener("touchend", function (e) {
     if (!isSwiping) return;
-
     const swipeEndX = e.changedTouches[0].clientX;
     const deltaX = swipeEndX - swipeStartX;
-    isSwiping = false; // Reset swiping state
-
+    isSwiping = false;
     if (Math.abs(deltaX) > swipeThreshold) {
       if (deltaX < 0) {
-        // Swipe left to delete
         videoItem.style.transition =
           "transform 0.3s ease-out, background-color 0.3s ease-out";
         videoItem.style.transform = "translateX(-100%)";
         videoItem.style.backgroundColor = "red";
         setTimeout(() => {
-          const videoId = videoItem.getAttribute("data-video-id");
-          videoItem.remove();
           socket.emit("remove_video", {
             id: parseInt(videoItem.getAttribute("data-id")),
           });
-          showNotification("Video Removed");
+          videoItem.remove();
+          showNotification("Audio Removed");
         }, 300);
       } else {
-        // Swipe right - reset position or add custom action if needed
         videoItem.style.transition = "transform 0.3s ease-out";
         videoItem.style.transform = "translateX(0)";
       }
     } else {
-      // Not enough swipe distance, reset position
       videoItem.style.transition = "transform 0.3s ease-out";
       videoItem.style.transform = "translateX(0)";
     }
@@ -235,31 +392,8 @@ function attachSwipeListener(videoItem) {
 
   videoItem.addEventListener("touchcancel", function () {
     isSwiping = false;
-    videoItem.style.transform = "translateX(0)"; // Reset position
+    videoItem.style.transform = "translateX(0)";
   });
-}
-function handleSwipe(videoItem) {
-  const swipeDistance = swipeStartX - swipeEndX;
-
-  if (swipeDistance > swipeThreshold) {
-    // Swipe left detected
-    const videoId = videoItem.getAttribute("data-video-id");
-    if (videoId !== currentVideoId) {
-      videoItem.style.transition =
-        "transform 0.3s ease-out, background-color 0.3s ease-out";
-      videoItem.style.transform = "translateX(-100%)";
-      videoItem.style.backgroundColor = "red";
-      setTimeout(() => {
-        videoItem.remove();
-        socket.emit("remove_video", {
-          id: parseInt(videoItem.getAttribute("data-id")),
-        });
-        showNotification("Video Removed");
-      }, 300);
-    } else {
-      showNotification("Cannot remove the playing video");
-    }
-  }
 }
 
 const sortable = new Sortable(document.getElementById("playlist"), {
@@ -278,141 +412,30 @@ const sortable = new Sortable(document.getElementById("playlist"), {
   },
 });
 
-function onYouTubeIframeAPIReady() {
-  player = new YT.Player("player", {
-    height: "360",
-    width: "640",
-    events: {
-      onReady: onPlayerReady,
-      onStateChange: onPlayerStateChange,
-    },
-  });
-}
-
-function onPlayerReady(event) {
-  player.setVolume(current_volume); // Set YouTube player volume to initial value
-  document.getElementById("volume-slider").value = current_volume; // Update volume slider on UI
-  socket.emit("request_current_video"); // Sync initial video state, if needed
-}
-
-function onPlayerStateChange(event) {
-  if (event.data === YT.PlayerState.ENDED) {
-    socket.emit("play_next_video");
-  } else if (event.data === YT.PlayerState.PLAYING) {
-    updatePlayPauseButton(YT.PlayerState.PLAYING);
-    startProgressUpdate();
-    socket.emit("sync_play_state", {
-      video_id: currentVideoId,
-      state: "playing",
-    });
-  } else if (event.data === YT.PlayerState.PAUSED) {
-    updatePlayPauseButton(YT.PlayerState.PAUSED);
-    stopProgressUpdate();
-    socket.emit("sync_play_state", {
-      video_id: currentVideoId,
-      state: "paused",
-    });
-  }
-}
-
-function playVideoById(videoId) {
-  const videoItem = document.querySelector(
-    `.video-item[data-video-id="${videoId}"]`
-  );
-  if (videoItem) {
-    player.loadVideoById(videoId);
-    currentVideoId = videoId;
-    updateCurrentTitle(videoId);
-    highlightCurrentVideo(videoId);
-    updatePlayPauseButton(YT.PlayerState.PLAYING);
-    startProgressUpdate();
-  }
-}
-
-function highlightCurrentVideo(videoId) {
-  document.querySelectorAll(".video-item").forEach((item) => {
-    item.classList.toggle(
-      "playing",
-      item.getAttribute("data-video-id") === videoId
-    );
-  });
-}
-
-function updateCurrentTitle(videoId) {
-  const currentItem = Array.from(document.querySelectorAll(".video-item")).find(
-    (item) => item.getAttribute("data-video-id") === videoId
-  );
-  if (currentItem) {
-    const currentTitle = currentItem.querySelector(".video-info p").innerText;
-    document.getElementById("current-title").innerText = currentTitle;
-  } else {
-    document.getElementById("current-title").innerText = "Now Playing: None";
-  }
-}
-
-function updatePlayPauseButton(state) {
-  const playPauseBtn = document.getElementById("play-pause-btn");
-  if (state === YT.PlayerState.PLAYING) {
-    playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
-  } else {
-    playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
-  }
-}
-
-function startProgressUpdate() {
-  if (player) {
-    setInterval(function () {
-      if (player && player.getDuration) {
-        const duration = player.getDuration();
-        const currentTime = player.getCurrentTime();
-        const progressPercent = (currentTime / duration) * 100;
-        document.getElementById(
-          "progress-bar-inner"
-        ).style.width = `${progressPercent}%`;
-        socket.emit("progress_update", { currentTime, duration });
-      }
-    }, 1000);
-  }
-}
-
-function stopProgressUpdate() {
-  clearInterval(startProgressUpdate);
-}
-
-socket.on("seek_video", function (data) {
-  if (currentVideoId === data.video_id) {
-    const seekTime = data.time;
-    player.seekTo(seekTime, true); // Seek to the specified time
-  }
-});
-
-function updateProgressBar() {
-  if (player && player.getDuration) {
-    const currentTime = player.getCurrentTime();
-    const duration = player.getDuration();
-    const progressPercent = (currentTime / duration) * 100;
-    socket.emit("progress_update", { currentTime, duration });
-  }
-}
-
-setInterval(updateProgressBar, 1000);
-
+//---------------------------------------------------------------------
+// 5) Progress, Play/Pause, Shuffle, Volume
+//---------------------------------------------------------------------
 document.getElementById("play-pause-btn").addEventListener("click", () => {
   if (player) {
-    if (player.getPlayerState() === YT.PlayerState.PLAYING) {
-      player.pauseVideo();
-      showNotification("Paused");
-      socket.emit("play_pause");
-      socket.emit("request_current_video"); // Request the current state for synchronization
-    } else {
-      player.playVideo();
+    if (player.paused) {
+      player.play().catch((err) => {
+        console.warn("Autoplay blocked or no user gesture yet:", err);
+        showNotification(
+          "Click on this page to allow playback, then play again."
+        );
+      });
       showNotification("Playing");
       socket.emit("play_pause");
-      socket.emit("request_current_video"); // Request the current state for synchronization
+      socket.emit("request_current_video");
+    } else {
+      player.pause();
+      showNotification("Paused");
+      socket.emit("play_pause");
+      socket.emit("request_current_video");
     }
   } else {
     socket.emit("play_pause");
-    socket.emit("request_current_video"); // Request the current state for synchronization
+    socket.emit("request_current_video");
   }
 });
 
@@ -420,69 +443,37 @@ document.getElementById("shuffle-btn").addEventListener("click", () => {
   socket.emit("shuffle_playlist");
 });
 
-socket.on("playlist_shuffled", () => {
-  showNotification("Playlist Shuffled");
-});
-
+/**
+ *  Setting the player volume to 0.2 initially to match the UI slider,
+ *  which we will also set to 20 on load.
+ */
 document.getElementById("volume-slider").addEventListener("input", function () {
   const volume = this.value;
-  current_volume = volume; // Update global volume variable
-  player.setVolume(volume); // Set YouTube player volume
+  current_volume = volume;
+  if (player) {
+    player.volume = volume / 100;
+  }
   socket.emit("change_volume", { volume });
   showVolumeOverlay(volume);
 });
 
-function showVolumeOverlay(volume) {
-  let volumeOverlay = document.getElementById("volume-overlay");
-  if (!volumeOverlay) {
-    volumeOverlay = document.createElement("div");
-    volumeOverlay.id = "volume-overlay";
-    document.body.appendChild(volumeOverlay);
-  }
-  volumeOverlay.textContent = `Volume: ${volume}%`;
-  volumeOverlay.className = "show";
-
-  const volumeSlider = document.getElementById("volume-slider");
-  const rect = volumeSlider.getBoundingClientRect();
-  const overlayRect = volumeOverlay.getBoundingClientRect();
-
-  volumeOverlay.style.left = `${
-    rect.left + rect.width / 2 - overlayRect.width / 2
-  }px`;
-  volumeOverlay.style.top = `${rect.top - overlayRect.height - 10}px`;
-
-  setTimeout(() => {
-    volumeOverlay.className = volumeOverlay.className.replace("show", "");
-  }, 1000);
-}
-
-socket.on("toggle_play_pause", (data) => {
-  if (player.getPlayerState() === YT.PlayerState.PLAYING) {
-    player.pauseVideo();
-    showNotification("Paused");
-  } else {
-    player.playVideo();
-    showNotification("Playing");
-  }
-  updatePlayPauseButton(
-    data.state === "playing" ? YT.PlayerState.PLAYING : YT.PlayerState.PAUSED
-  );
-});
-
-socket.on("update_volume", (data) => {
+//---------------------------------------------------------------------
+// 6) Seek Handling
+//---------------------------------------------------------------------
+function updateProgressBar() {
   if (player) {
-    player.setVolume(data.volume);
+    const currentTime = player.currentTime;
+    const duration = player.duration;
+    if (!isNaN(duration) && duration > 0) {
+      socket.emit("progress_update", { currentTime, duration });
+    }
   }
-  document.getElementById("volume-slider").value = data.volume;
-});
+}
+setInterval(updateProgressBar, 1000);
 
-socket.on("current_video", (data) => {
-  currentVideoId = data.video_id;
-  updateCurrentTitle(currentVideoId);
-  highlightCurrentVideo(currentVideoId);
-  updatePlayPauseButton(data.state === "playing" ? "playing" : "paused");
-});
-
+//---------------------------------------------------------------------
+// 7) Dark Mode & Suggestions Toggle
+//---------------------------------------------------------------------
 document.getElementById("dark-mode-toggle").addEventListener("click", () => {
   document.body.classList.toggle("dark-mode");
   const icon = document.getElementById("dark-mode-toggle").querySelector("i");
@@ -512,6 +503,13 @@ document
 window.addEventListener("load", () => {
   const isDarkMode = localStorage.getItem("darkMode") === "true";
   suggestionsEnabled = localStorage.getItem("suggestionsEnabled") === "true";
+
+  // Set the UI slider to 20% and the player volume to 0.2 on load
+  document.getElementById("volume-slider").value = 20;
+  if (player) {
+    player.volume = 0.2;
+  }
+
   if (isDarkMode) {
     document.body.classList.add("dark-mode");
     document
@@ -522,6 +520,39 @@ window.addEventListener("load", () => {
   document.getElementById("suggestions-toggle").checked = suggestionsEnabled;
   socket.emit("request_current_video");
 });
+
+//---------------------------------------------------------------------
+// 8) Utility Functions
+//---------------------------------------------------------------------
+function highlightCurrentVideo(videoId) {
+  document.querySelectorAll(".video-item").forEach((item) => {
+    item.classList.toggle(
+      "playing",
+      item.getAttribute("data-video-id") === videoId
+    );
+  });
+}
+
+function updateCurrentTitle(videoId) {
+  const currentItem = Array.from(document.querySelectorAll(".video-item")).find(
+    (item) => item.getAttribute("data-video-id") === videoId
+  );
+  if (currentItem) {
+    const currentTitle = currentItem.querySelector(".video-info p").innerText;
+    document.getElementById("current-title").innerText = currentTitle;
+  } else {
+    document.getElementById("current-title").innerText = "Now Playing: None";
+  }
+}
+
+function updatePlayPauseButton(state) {
+  const playPauseBtn = document.getElementById("play-pause-btn");
+  if (state === "playing") {
+    playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+  } else {
+    playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+  }
+}
 
 function formatDuration(seconds) {
   const hrs = Math.floor(seconds / 3600);
@@ -540,7 +571,6 @@ function showNotification(message) {
   notification.textContent = message;
   notification.className = "show";
 
-  const overlayRect = notification.getBoundingClientRect();
   notification.style.left = `50%`;
   notification.style.transform = `translateX(-50%)`;
   notification.style.bottom = `20px`;
@@ -553,32 +583,46 @@ function showNotification(message) {
 
 function getNotificationMessage(link) {
   if (!link) {
-    console.log("No link provided, defaulting to 'Content Added'");
     return "Content Added";
   }
-
-  console.log("Determining message for link:", link);
-
   if (link.includes("list=")) {
-    console.log("Playlist detected");
     return "Playlist Added";
   } else if (link.includes("music.youtube.com")) {
-    console.log("Music detected");
     return "Music Added";
   } else if (link.includes("youtube.com") || link.includes("youtu.be")) {
-    console.log("Video detected");
-    return "Video Added";
+    return "Audio Added";
   }
-
-  console.log("Fallback content added");
   return "Content Added";
+}
+
+function showVolumeOverlay(volume) {
+  let volumeOverlay = document.getElementById("volume-overlay");
+  if (!volumeOverlay) {
+    volumeOverlay = document.createElement("div");
+    volumeOverlay.id = "volume-overlay";
+    document.body.appendChild(volumeOverlay);
+  }
+  volumeOverlay.textContent = `Volume: ${volume}%`;
+  volumeOverlay.className = "show";
+
+  const volumeSlider = document.getElementById("volume-slider");
+  const rect = volumeSlider.getBoundingClientRect();
+  const overlayRect = volumeOverlay.getBoundingClientRect();
+
+  volumeOverlay.style.left = `${
+    rect.left + rect.width / 2 - overlayRect.width / 2
+  }px`;
+  volumeOverlay.style.top = `${rect.top - overlayRect.height - 10}px`;
+
+  setTimeout(() => {
+    volumeOverlay.className = volumeOverlay.className.replace("show", "");
+  }, 1000);
 }
 
 function updateContainerSize() {
   const container = document.querySelector(".container");
   const playlist = document.querySelector(".playlist");
   const items = playlist.children;
-
   if (items.length === 0) {
     container.classList.add("empty-container");
     container.classList.remove("full-container");
@@ -587,16 +631,5 @@ function updateContainerSize() {
     container.classList.add("full-container");
   }
 }
-
-// Initial call to set the size based on the current state
 updateContainerSize();
-
-// Example function to add video to the playlist
-function addVideo(videoElement) {
-  const playlist = document.querySelector(".playlist");
-  playlist.appendChild(videoElement);
-  updateContainerSize();
-}
-
-// Attach resize event listener if needed for dynamic adjustments
 window.addEventListener("resize", updateContainerSize);

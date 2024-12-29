@@ -127,44 +127,39 @@ h1 {
   }
 }
 
-.video-container,
-.controls-card,
-.video-form-card,
-.playlist {
-  margin-bottom: 10px;
-}
-
-.video-title {
-  font-weight: bold;
-  font-size: 1em;
-  /* Adjust the size as needed */
-}
-
-.video-meta {
-  font-size: 0.4em;
-  /* Slightly smaller size */
-  opacity: 0.8;
-  /* Reduced opacity for subtle appearance */
-  margin: 2px 0;
-  /* Adjust spacing as needed */
-}
-
-#player-container {
-  position: relative;
-  padding-top: 56.25%;
-  /* 16:9 Aspect Ratio */
+/* Changed from .video-container to .audio-container */
+.audio-container {
   margin-bottom: 10px;
   border-radius: 15px;
   overflow: hidden;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  /* No forced aspect ratio or absolute positioning for audio */
 }
 
-#player {
-  position: absolute;
-  top: 0;
-  left: 0;
+.audio-container audio {
   width: 100%;
-  height: 100%;
+  height: auto;
+}
+
+/* Removed old #player-container styles that forced 16:9 ratio */
+
+/* The rest of the layout remains the same */
+
+.video-title {
+  font-weight: bold;
+  font-size: 1em;
+}
+
+.video-meta {
+  font-size: 0.4em;
+  opacity: 0.8;
+  margin: 2px 0;
+}
+
+.controls-card,
+.video-form-card,
+.playlist {
+  margin-bottom: 10px;
 }
 
 .controls-card,
@@ -195,9 +190,7 @@ h1 {
 .controls .buttons {
   display: flex;
   align-items: center;
-  /* Vertically center the elements */
   gap: 10px;
-  /* Adjusted gap between buttons */
 }
 
 .controls button,
@@ -210,7 +203,6 @@ h1 {
   color: #fff;
   border: none;
   padding: 8px 20px;
-  /* Reduced padding for smaller buttons */
   border-radius: 25px;
   cursor: pointer;
   transition: background-color 0.3s, box-shadow 0.3s;
@@ -220,9 +212,7 @@ h1 {
 .dark-mode-toggle i,
 .suggestions-toggle i {
   width: 20px;
-  /* Icon size */
   height: 20px;
-  /* Icon size */
   display: inline-block;
   text-align: center;
   line-height: 20px;
@@ -234,7 +224,6 @@ h1 {
 .dark-mode .suggestions-toggle {
   background-color: #555;
   color: #fff;
-  /* Changed background color for dark mode toggle */
 }
 
 .controls button,
@@ -243,7 +232,6 @@ h1 {
   color: #fff;
   border: none;
   padding: 8px 20px;
-  /* Reduced padding for smaller buttons */
   border-radius: 25px;
   cursor: pointer;
   transition: background-color 0.3s, box-shadow 0.3s;
@@ -273,7 +261,6 @@ h1 {
 
 .controls .dark-mode-toggle {
   background-color: #555;
-  /* Changed background color for dark mode toggle */
   color: #fff;
 }
 
@@ -321,28 +308,18 @@ h1 {
   flex-direction: column;
   border-radius: 15px;
   gap: 8px;
-  /* max-height: calc(92vh - 200px);  */
-  /* flex: 1; */
   overflow-y: auto;
   transition: max-height 0.3s;
 }
 
 .empty-container {
   max-height: 20vh;
-  /* Set a smaller height when empty */
+  /* Smaller height when empty */
 }
 
 .full-container {
   max-height: 98vh;
-  /* Max height when full */
 }
-
-/* Styles for larger screens (PC)
-@media (min-width: 768px) {
-    .playlist {
-        max-height: calc(50vh - 200px); 
-    }
-} */
 
 .video-item {
   display: flex;
@@ -429,7 +406,6 @@ h1 {
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
   margin-bottom: 10px;
   transition: background-color 0.3s, color 0.3s;
-
   user-select: none;
   -webkit-user-select: none; /* Safari */
   -moz-user-select: none; /* Firefox */
@@ -441,18 +417,11 @@ h1 {
   color: #ddd;
 }
 
-/* Add gap below the "Now Playing:" text */
 .now-playing p {
   margin-bottom: 10px;
-  /* Adds 10px gap */
 }
 
 /* For the phone version */
-.seek-bar {
-  position: relative;
-  width: 100%;
-}
-
 .seek-bar {
   position: relative;
   width: 100%;
@@ -501,11 +470,9 @@ body.dark-mode .video-meta {
 body.dark-mode .controls-card,
 .dark-mode-toggle {
   background-color: #555;
-  /* Changed background color for dark mode toggle */
   color: #fff;
 }
 
-/* Ensure the styles apply for the existing classes */
 .dark-mode {
   background-color: #121212;
   color: #ddd;
@@ -531,7 +498,6 @@ body.dark-mode .controls-card,
 
 .dark-mode body {
   background-color: #121212;
-  /* Ensures entire screen is dark */
 }
 
 .dark-mode h1,
@@ -575,12 +541,10 @@ body.dark-mode .controls-card,
 .dragging {
   opacity: 0.8;
   background-color: #f0f0f0;
-  /* Color for dragging items */
 }
 
 .ghost {
   opacity: 0.5;
-  /* Style for the ghost item */
 }
 
 .chosen {
@@ -603,12 +567,10 @@ body.dark-mode .controls-card,
   border-color: #0056b3;
 }
 
-/* General style for video items to ensure uniform appearance */
 .video-item {
   transition: background-color 0.3s, border-color 0.3s;
 }
 
-/* Ensure the .dragging class is distinctly styled */
 .video-item.dragging {
   border: 2px solid #007bff;
 }
@@ -672,7 +634,6 @@ body.dark-mode .controls-card,
   width: 40px;
   height: 20px;
   vertical-align: middle;
-  /* Ensure the toggle is vertically aligned */
 }
 
 .toggle-input {
@@ -725,18 +686,14 @@ body.dark-mode .controls-card,
 #suggestions-overlay {
   position: absolute;
   padding: 5px 10px;
-  /* Smaller padding for a more compact box */
   background-color: #333;
   color: #fff;
   border-radius: 5px;
-  /* Smaller border radius */
   font-size: 0.8em;
-  /* Smaller font size */
   display: none;
   opacity: 0;
   transition: opacity 0.3s;
   z-index: 1000;
-  /* Ensure it's above other elements */
 }
 
 #suggestions-overlay.show {
@@ -811,7 +768,7 @@ body.dark-mode #notification-overlay {
   z-index: 1000;
   display: none;
   padding: 5px 0;
-  font-size: 0.9em; /* Match the standard text size */
+  font-size: 0.9em;
 }
 
 .context-menu-item {
@@ -838,16 +795,12 @@ body.dark-mode #notification-overlay {
 
 @media (hover: none) and (pointer: coarse) {
   /* Simulate hover effects for mobile touchscreens */
-
   .header button:active,
   .controls button:active,
   .video-item:active,
   .remove-btn:active {
     background-color: #f0f0f0;
-    /* Simulate the hover effect with a color change */
   }
-
-  /* Add an effect on touch start */
   .video-item:active {
     background-color: #e0e0e0;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
@@ -862,13 +815,12 @@ button,
 .suggestions-toggle,
 .dark-mode-toggle,
 .add-video-btn {
-  -webkit-tap-highlight-color: transparent; /* Remove tap highlight color */
-  outline: none; /* Remove outline on click */
-  transform: scale(1); /* Ensure no scaling */
-  transition: background-color 0.1s, box-shadow 0.1s; /* Keep transitions */
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+  transform: scale(1);
+  transition: background-color 0.1s, box-shadow 0.1s;
 }
 
-/* Prevent resizing or scaling on touch */
 button:active,
 .header button:active,
 .controls button:active,
@@ -876,11 +828,10 @@ button:active,
 .suggestions-toggle:active,
 .dark-mode-toggle:active,
 .add-video-btn {
-  transform: scale(1); /* Prevent the button from scaling */
+  transform: scale(1);
 }
 
 .add-video-btn {
-  /* Apply similar styles as the other buttons */
   -webkit-tap-highlight-color: transparent;
   outline: none;
   transform: scale(1);
