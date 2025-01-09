@@ -8,7 +8,7 @@ from youtubesearchpython import Playlist as YTPlaylist, VideosSearch
 from ytmusicapi import YTMusic 
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = "your_secret_key"
+app.config["SECRET_KEY"] = "my_secret_key"
 socketio = SocketIO(app, max_http_buffer_size=1000000) 
 
 video_list = []
