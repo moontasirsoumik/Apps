@@ -5,6 +5,7 @@ import socket
 import random
 from youtubesearchpython.extras import Video
 from youtubesearchpython import Playlist as YTPlaylist, VideosSearch
+from ytmusicapi import YTMusic
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "your_secret_key"
@@ -14,6 +15,7 @@ video_list = []
 current_video_id = None
 player_state = "paused"
 current_volume = 10
+ytmusic = YTMusic()
 
 @app.route("/")
 def home():
@@ -49,25 +51,61 @@ def extract_video_id(url):
 
 def add_video_to_list(url):
     try:
-        if "list=" in url:  # Check if it's a playlist
-            videos = fetch_videos_from_playlist(url)
-            for video in videos:
-                video_list.append(video)
-                emit("update_playlist", video, broadcast=True)
-        else:
-            # Clean URL for YouTube Music
-            if "music.youtube.com" in url:
-                url = url.replace("music.youtube.com", "www.youtube.com")
-            video_info = fetch_youtube_data(url)
+        # Extract video ID from URL
+        video_id = extract_video_id(url)
+        if not video_id:
+            raise ValueError("Invalid YouTube URL")
+
+        # Attempt to fetch the YouTube Music version
+        music_url = f"https://music.youtube.com/watch?v={video_id}"
+        try:
+            video_info = fetch_youtube_music_data(music_url)
             if video_info:
                 video_info.update({
                     "id": len(video_list),
-                    "video_id": extract_video_id(url)
+                    "video_id": video_id,
                 })
                 video_list.append(video_info)
                 emit("update_playlist", video_info, broadcast=True)
+                return  # Success: Exit function
+        except Exception as e:
+            print(f"Failed to fetch from YouTube Music: {e}")
+
+        # Fallback to the original YouTube version
+        video_info = fetch_youtube_data(url)
+        if video_info:
+            video_info.update({
+                "id": len(video_list),
+                "video_id": video_id,
+            })
+            video_list.append(video_info)
+            emit("update_playlist", video_info, broadcast=True)
     except Exception as e:
         print(f"Error adding video: {e}")
+
+def fetch_youtube_music_data(url):
+    """Fetch video information from YouTube Music using ytmusicapi."""
+    try:
+        video_id = extract_video_id(url)
+        if not video_id:
+            raise ValueError("Invalid YouTube Music URL")
+
+        # Get detailed video info
+        video_info = ytmusic.get_song(video_id)
+        if not video_info:
+            raise ValueError("Video not found on YouTube Music")
+
+        # Extract relevant data
+        return {
+            "title": video_info["videoDetails"]["title"],
+            "thumbnail": video_info["videoDetails"]["thumbnail"]["thumbnails"][-1]["url"],
+            "artist": video_info["videoDetails"]["author"],
+            "length": video_info["videoDetails"]["lengthSeconds"],
+        }
+    except Exception as e:
+        print(f"Error fetching YouTube Music data: {e}")
+        return None
+
 
 
 def extract_playlist_id(url):
@@ -185,21 +223,21 @@ def search_videos(data):
         return
 
     try:
-        videos_search = VideosSearch(query, limit=5)
-        results = videos_search.result()["result"]
+        # Perform the search on YouTube Music
+        results = ytmusic.search(query, filter="songs", limit=5)
         suggestions = [
             {
-                "videoId": video["id"],
-                "title": video["title"],
-                "thumbnail": video["thumbnails"][-1]["url"],
-                "channel": video["channel"]["name"],
-                "duration": video.get("duration", "Unknown"),
+                "videoId": result["videoId"],
+                "title": result["title"],
+                "thumbnail": result["thumbnails"][-1]["url"],
+                "channel": result["artists"][0]["name"] if "artists" in result else "Unknown Artist",
+                "duration": result.get("duration", "Unknown"),
             }
-            for video in results
+            for result in results if result["resultType"] == "song"
         ]
         emit("suggestions", {"suggestions": suggestions})
     except Exception as e:
-        print(f"Error fetching suggestions: {e}")
+        print(f"Error fetching YouTube Music suggestions: {e}")
         emit("suggestions", {"error": str(e)})
 
 @app.route("/search_suggestions")

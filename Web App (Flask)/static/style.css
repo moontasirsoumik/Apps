@@ -147,17 +147,31 @@ h1 {
 
 .video-title {
   font-weight: bold;
-  font-size: 1em;
+  font-size: 1 rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 1; /* Limit title to one line */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.video-artist {
+  font-size: 0.85em;
+  color: #666;
+  margin-top: 4px;
   display: -webkit-box; /* Flexbox for webkit browsers */
-  -webkit-line-clamp: 1; /* Show only 1 line */
+  -webkit-line-clamp: 1; /* Limit to one line */
   -webkit-box-orient: vertical; /* Vertical text direction */
   overflow: hidden; /* Hide overflowing text */
-  text-overflow: ellipsis; /* Add ellipsis at the end of truncated text */
-  max-width: 100%; /* Ensure it fits within the container */
+  text-overflow: ellipsis; /* Add ellipsis for overflow */
+}
+
+body.dark-mode .video-artist {
+  color: #aaa; /* Adjust for dark mode */
 }
 
 .video-meta {
-  font-size: 0.4em;
+  font-size: 0.em;
   opacity: 0.8;
   margin: 2px 0;
 }
@@ -337,8 +351,8 @@ h1 {
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
   cursor: pointer;
   transition: background-color 0.3s, box-shadow 0.3s;
-  height: auto; /* Ensure it adapts to content height */
-  overflow: visible; /* Do not clip content of the whole card */
+  height: 60px;
+  overflow: hidden;
 }
 
 .video-item.removing {
@@ -358,12 +372,20 @@ h1 {
   border-color: #444;
 }
 
+.dark-mode .video-info {
+  color: #ddd;
+}
+
+.dark-mode .video-info .video-artist {
+  color: #aaa;
+}
+
 .video-item img {
-  width: 120px;
-  height: 80px;
-  border-radius: 8px;
-  margin-right: 20px;
+  width: 60px; /* Reduce thumbnail size */
+  height: 60px;
+  border-radius: 5px;
   object-fit: cover;
+  margin-right: 15px;
 }
 
 .video-info {
@@ -373,7 +395,7 @@ h1 {
 }
 
 .video-info p {
-  font-size: 1rem;
+  /* font-size: 1rem; */
   color: #333;
   transition: color 0.3s;
 }
@@ -627,6 +649,9 @@ body.dark-mode .suggestion-item:hover {
 
 .suggestion-info {
   flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .suggestion-title {
@@ -636,9 +661,20 @@ body.dark-mode .suggestion-item:hover {
   margin: 0;
 }
 
+.suggestion-artist {
+  font-size: 12px;
+  color: #888; /* Gray color for artist name */
+  margin-top: 2px;
+}
+
 body.dark-mode .suggestion-title {
   color: #ddd;
 }
+
+body.dark-mode .suggestion-artist {
+  color: #aaa;
+}
+
 
 .suggestion-item,
 .error-message {

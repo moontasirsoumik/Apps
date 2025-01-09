@@ -101,11 +101,13 @@
             alt="{{ video.title }}"
           />
           <div class="video-info">
-            <p>{{ video.title }}</p>
+            <p class="video-title">{{ video.title }}</p>
+            <p class="video-artist">{{ video.artist or video.creator }}</p>
           </div>
         </div>
         {% endfor %}
       </div>
+      
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>

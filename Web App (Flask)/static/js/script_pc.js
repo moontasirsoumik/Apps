@@ -148,6 +148,7 @@ function showSuggestions(suggestions) {
       </div>
       <div class="suggestion-info">
         <p class="suggestion-title">${item.title}</p>
+        <p class="suggestion-artist">${item.channel}</p>
       </div>
     `;
     suggestionItem.onclick = () => selectSuggestion(item.videoId, item.title);
@@ -162,6 +163,7 @@ function showSuggestions(suggestions) {
     document.addEventListener("touchstart", handleOutsideTouch);
   }, 0);
 }
+
 
 function handleOutsideClick(event) {
   const contextMenu = document.getElementById("context-menu");
@@ -449,11 +451,10 @@ function addVideoToList(video) {
     <img class="drag-area" src="${video.thumbnail}" alt="${video.title}">
     <div class="video-info">
       <p class="video-title"><strong>${video.title}</strong></p>
-      <p class="video-meta">${
-        video.artist ? "Artist: " + video.artist : "Creator: " + video.creator
+      <p class="video-artist">${
+        video.artist ? video.artist : video.creator
       }</p>
       ${video.album ? `<p class="video-meta">Album: ${video.album}</p>` : ""}
-      <p class="video-meta">Length: ${formatDuration(video.length)}</p>
     </div>
   `;
   playlist.appendChild(videoItem);

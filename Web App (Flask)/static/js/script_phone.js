@@ -81,29 +81,6 @@ function debounce(func, delay) {
   };
 }
 
-function fetchSuggestionsFallback(query) {
-  fetch(`/search_suggestions?query=${encodeURIComponent(query)}`)
-    .then((response) => response.json())
-    .then((data) => {
-      if (data.error) {
-        showError("Error fetching suggestions: " + data.error);
-        return;
-      }
-
-      const suggestions = data.suggestions || [];
-      if (suggestions.length > 0) {
-        showSuggestions(suggestions);
-      } else {
-        hideSuggestions();
-      }
-    })
-    .catch((error) => {
-      console.error("Error fetching suggestions:", error);
-      showError("Failed to fetch suggestions. Please try again.");
-      hideSuggestions();
-    });
-}
-
 // Debounced function for suggestions
 const debouncedFetchSuggestions = debounce((query) => {
   if (query.length > 2) {
@@ -155,6 +132,7 @@ function showSuggestions(suggestions) {
       </div>
       <div class="suggestion-info">
         <p class="suggestion-title">${item.title}</p>
+        <p class="suggestion-artist">${item.channel}</p>
       </div>
     `;
     suggestionItem.onclick = () => selectSuggestion(item.videoId, item.title);
@@ -169,6 +147,7 @@ function showSuggestions(suggestions) {
     document.addEventListener("touchstart", handleOutsideTouch);
   }, 0);
 }
+
 
 // Handle suggestion selection
 function selectSuggestion(videoId, title) {
@@ -381,18 +360,17 @@ function addVideoToList(video) {
     <img class="drag-area" src="${video.thumbnail}" alt="${video.title}">
     <div class="video-info">
       <p class="video-title"><strong>${video.title}</strong></p>
-      <p class="video-meta">${
-        video.artist ? "Artist: " + video.artist : "Creator: " + video.creator
+      <p class="video-artist">${
+        video.artist ? video.artist : video.creator
       }</p>
       ${video.album ? `<p class="video-meta">Album: ${video.album}</p>` : ""}
-      <p class="video-meta">Length: ${formatDuration(video.length)}</p>
     </div>
   `;
   playlist.appendChild(videoItem);
   attachClickListener(videoItem);
   attachSwipeListener(videoItem);
   attachLongPressListener(videoItem);
-  updateContainerSize();
+  updateContainerSize();  
 }
 
 function updatePlaylist(videos) {
