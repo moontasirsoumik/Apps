@@ -291,9 +291,22 @@ socket.on("update_list", function (data) {
 
 socket.on("play_video", async function (data) {
   currentVideoId = data.video_id;
-  showNotification("Playing");
+
+  // Find the song details based on the current video ID
+  const songDetails = videoList.find((video) => video.video_id === currentVideoId);
+
+  // Construct the notification message
+  const songTitle = songDetails?.title || "Unknown Title";
+  const artist = songDetails?.artist || songDetails?.creator || "Unknown Artist";
+  const notificationMessage = `Playing: ${songTitle} by ${artist}`;
+
+  // Show the notification
+  showNotification(notificationMessage, "info");
+
+  // Play the song
   await loadAndPlayVideo(currentVideoId);
 });
+
 
 socket.on("toggle_play_pause", (data) => {
   if (data.state === "playing") {
@@ -758,11 +771,13 @@ function showNotification(message, type = "info") {
   notification.style.transform = "translateX(-50%)";
   notification.style.bottom = "20px";
 
+  // Set timeout to hide the notification
   clearTimeout(currentNotificationTimeout);
   currentNotificationTimeout = setTimeout(() => {
     notification.className = notification.className.replace("show", "");
-  }, 3000);
+  }, 3000); // Adjust the duration as needed (in milliseconds)
 }
+
 
 
 function getNotificationMessage(link) {

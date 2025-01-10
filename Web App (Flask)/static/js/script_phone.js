@@ -640,11 +640,13 @@ function showNotification(message, type = "info") {
   notification.style.transform = "translateX(-50%)";
   notification.style.bottom = "20px";
 
+  // Set timeout to hide the notification
   clearTimeout(currentNotificationTimeout);
   currentNotificationTimeout = setTimeout(() => {
     notification.className = notification.className.replace("show", "");
-  }, 3000);
+  }, 3000); // Adjust the duration as needed (in milliseconds)
 }
+
 
 
 function getNotificationMessage(link) {
