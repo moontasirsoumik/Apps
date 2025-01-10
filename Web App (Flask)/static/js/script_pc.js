@@ -260,10 +260,28 @@ function showError(message) {
 // 2) Socket.IO Event Handlers
 //---------------------------------------------------------------------
 socket.on("update_playlist", function (data) {
-  addVideoToList(data);
-  videoList.push(data);
-  showNotification(getNotificationMessage(currentLink));
+  // Check if the song already exists in the playlist
+  const alreadyExists = videoList.some((video) => video.video_id === data.video_id);
+
+  if (alreadyExists) {
+    // If it already exists, update its position in the list
+    videoList = videoList.filter((video) => video.video_id !== data.video_id);
+    videoList.push(data); // Move it to the bottom
+    updatePlaylist(videoList);
+    showNotification(
+      `'${data.title}' is already in the playlist. It has been moved to the bottom.`,
+      "info"
+    );
+  } else {
+    // Add the new song
+    videoList.push(data);
+    addVideoToList(data);
+    showNotification(`'${data.title}' has been successfully added to the playlist.`, "success");
+  }
 });
+
+
+
 
 socket.on("update_list", function (data) {
   updatePlaylist(data);

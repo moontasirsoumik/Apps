@@ -199,10 +199,28 @@ window.addEventListener("resize", positionSuggestions);
 // 2) Socket.IO Event Handlers (Phone as Remote)
 //--------------------------------------------------------------------------
 socket.on("update_playlist", function (data) {
-  addVideoToList(data);
-  videoList.push(data);
-  showNotification(getNotificationMessage(currentLink));
+  // Check if the song already exists in the playlist
+  const alreadyExists = videoList.some((video) => video.video_id === data.video_id);
+
+  if (alreadyExists) {
+    // If it already exists, update its position in the list
+    videoList = videoList.filter((video) => video.video_id !== data.video_id);
+    videoList.push(data); // Move it to the bottom
+    updatePlaylist(videoList);
+    showNotification(
+      `'${data.title}' is already in the playlist. It has been moved to the bottom.`,
+      "info"
+    );
+  } else {
+    // Add the new song
+    videoList.push(data);
+    addVideoToList(data);
+    showNotification(`'${data.title}' has been successfully added to the playlist.`, "success");
+  }
 });
+
+
+
 
 socket.on("update_list", function (data) {
   videoList = data;
@@ -216,11 +234,28 @@ socket.on("update_list", function (data) {
  */
 socket.on("play_video", function (data) {
   currentVideoId = data.video_id;
+
+  // Find the song details based on the current video ID
+  const songDetails = videoList.find((video) => video.video_id === currentVideoId);
+
+  // Construct the notification message
+  const songTitle = songDetails?.title || "Unknown Title";
+  const artist = songDetails?.artist || songDetails?.creator || "Unknown Artist";
+  const notificationMessage = `Playing: ${songTitle} by ${artist}`;
+
+  // Highlight the current video
   highlightCurrentVideo(data.video_id);
+
+  // Update the current title
   updateCurrentTitle(data.video_id);
+
+  // Update play/pause button
   updatePlayPauseButton("playing");
-  showNotification("Playing");
+
+  // Show the notification
+  showNotification(notificationMessage, "info");
 });
+
 
 /**
  * The server toggled global play/pause.
