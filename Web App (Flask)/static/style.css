@@ -352,6 +352,7 @@ body.dark-mode .video-artist {
   cursor: pointer;
   transition: background-color 0.3s, box-shadow 0.3s;
   height: 60px;
+  min-height: 60px;
   overflow: hidden;
 }
 
@@ -626,7 +627,7 @@ body.dark-mode #suggestion-overlay {
 .suggestion-item {
   display: flex;
   align-items: center;
-  padding: 10px;
+  padding: 5px;
   cursor: pointer;
   transition: background-color 0.3s, color 0.3s;
 }
@@ -640,8 +641,8 @@ body.dark-mode .suggestion-item:hover {
 }
 
 .suggestion-thumbnail img {
-  width: 60px;
-  height: 40px;
+  width: 50px;
+  height: 50px;
   border-radius: 5px;
   object-fit: cover;
   margin-right: 10px;
@@ -655,16 +656,14 @@ body.dark-mode .suggestion-item:hover {
 }
 
 .suggestion-title {
-  font-size: 14px;
+  font-size: 0.9em;
   font-weight: 500;
   color: #333;
-  margin: 0;
 }
 
 .suggestion-artist {
-  font-size: 12px;
+  font-size: 0.75em;
   color: #888; /* Gray color for artist name */
-  margin-top: 2px;
 }
 
 body.dark-mode .suggestion-title {
@@ -675,8 +674,6 @@ body.dark-mode .suggestion-artist {
   color: #aaa;
 }
 
-
-.suggestion-item,
 .error-message {
   padding: 10px;
   cursor: pointer;
