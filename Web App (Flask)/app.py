@@ -95,16 +95,20 @@ def fetch_youtube_music_data(url):
         if not video_info:
             raise ValueError("Video not found on YouTube Music")
 
+        # Clean up artist name
+        artist_name = video_info["videoDetails"]["author"].replace(" - Topic", "").strip()
+
         # Extract relevant data
         return {
             "title": video_info["videoDetails"]["title"],
             "thumbnail": video_info["videoDetails"]["thumbnail"]["thumbnails"][-1]["url"],
-            "artist": video_info["videoDetails"]["author"],
+            "artist": artist_name,
             "length": video_info["videoDetails"]["lengthSeconds"],
         }
     except Exception as e:
         print(f"Error fetching YouTube Music data: {e}")
         return None
+
 
 
 
@@ -135,6 +139,9 @@ def fetch_youtube_data(video_url):
             duration_seconds = int(video_info.get("duration", {}).get("secondsText", 0) or 0)
             category = video_info.get("category", "Unknown")
 
+            # Clean up artist name
+            channel_name = channel_name.replace(" - Topic", "").strip()
+
             # Determine if it's music-related
             is_music = category.lower() == "music"
 
@@ -156,6 +163,7 @@ def fetch_youtube_data(video_url):
     except Exception as e:
         print(f"Error fetching video info: {e}")
         return {}
+
 
 def fetch_videos_from_playlist(playlist_url):
     """Fetches videos from a playlist using youtubesearchpython"""
