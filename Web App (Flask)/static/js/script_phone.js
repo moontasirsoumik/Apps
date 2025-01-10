@@ -363,7 +363,7 @@ function addVideoToList(video) {
       <p class="video-artist">${
         video.artist ? video.artist : video.creator
       }</p>
-      ${video.album ? `<p class="video-meta">Album: ${video.album}</p>` : ""}
+      ${video.album ? `<p class=".suggestion-item">Album: ${video.album}</p>` : ""}
     </div>
   `;
   playlist.appendChild(videoItem);
@@ -580,24 +580,37 @@ function formatTime(time) {
     : `${mins}:${secs.toString().padStart(2, "0")}`;
 }
 
-function showNotification(message) {
+function showNotification(message, type = "info") {
   let notification = document.getElementById("notification-overlay");
   if (!notification) {
     notification = document.createElement("div");
     notification.id = "notification-overlay";
     document.body.appendChild(notification);
   }
+
+  // Style notification based on type
+  const typeStyles = {
+    info: { backgroundColor: "#007bff", color: "#fff" },
+    success: { backgroundColor: "#28a745", color: "#fff" },
+    warning: { backgroundColor: "#ffc107", color: "#212529" },
+    error: { backgroundColor: "#dc3545", color: "#fff" },
+  };
+  const styles = typeStyles[type] || typeStyles.info;
+  notification.style.backgroundColor = styles.backgroundColor;
+  notification.style.color = styles.color;
+
   notification.textContent = message;
   notification.className = "show";
-  notification.style.left = `50%`;
-  notification.style.transform = `translateX(-50%)`;
-  notification.style.bottom = `20px`;
+  notification.style.left = "50%";
+  notification.style.transform = "translateX(-50%)";
+  notification.style.bottom = "20px";
 
   clearTimeout(currentNotificationTimeout);
   currentNotificationTimeout = setTimeout(() => {
     notification.className = notification.className.replace("show", "");
-  }, 2000);
+  }, 3000);
 }
+
 
 function getNotificationMessage(link) {
   if (!link) {

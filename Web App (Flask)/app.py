@@ -56,6 +56,17 @@ def add_video_to_list(url):
         if not video_id:
             raise ValueError("Invalid YouTube URL")
 
+        # Check if the video is already in the playlist
+        global video_list
+        for video in video_list:
+            if video["video_id"] == video_id:
+                # Move the existing video to the bottom
+                video_list.remove(video)
+                video_list.append(video)
+                emit("update_list", video_list, broadcast=True)
+                emit("notification", {"message": f"'{video['title']}' is already in the playlist. It has been moved to the bottom."}, broadcast=True)
+                return  # Exit early as the video is already in the playlist
+
         # Attempt to fetch the YouTube Music version
         music_url = f"https://music.youtube.com/watch?v={video_id}"
         try:
@@ -67,6 +78,7 @@ def add_video_to_list(url):
                 })
                 video_list.append(video_info)
                 emit("update_playlist", video_info, broadcast=True)
+                emit("notification", {"message": f"'{video_info['title']}' has been added to the playlist."}, broadcast=True)
                 return  # Success: Exit function
         except Exception as e:
             print(f"Failed to fetch from YouTube Music: {e}")
@@ -80,8 +92,11 @@ def add_video_to_list(url):
             })
             video_list.append(video_info)
             emit("update_playlist", video_info, broadcast=True)
+            emit("notification", {"message": f"'{video_info['title']}' has been added to the playlist."}, broadcast=True)
     except Exception as e:
         print(f"Error adding video: {e}")
+
+
 
 def fetch_youtube_music_data(url):
     """Fetch video information from YouTube Music using ytmusicapi."""
