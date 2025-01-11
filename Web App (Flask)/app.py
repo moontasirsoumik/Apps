@@ -60,11 +60,13 @@ def add_video_to_list(url):
         global video_list
         for video in video_list:
             if video["video_id"] == video_id:
+                # Trigger the notification immediately
+                emit("notification", {"message": f"'{video['title']}' is already in the playlist. It has been moved to the bottom."}, broadcast=True)
+                
                 # Move the existing video to the bottom
                 video_list.remove(video)
                 video_list.append(video)
                 emit("update_list", video_list, broadcast=True)
-                emit("notification", {"message": f"'{video['title']}' is already in the playlist. It has been moved to the bottom."}, broadcast=True)
                 return  # Exit early as the video is already in the playlist
 
         # Attempt to fetch the YouTube Music version
@@ -95,7 +97,6 @@ def add_video_to_list(url):
             emit("notification", {"message": f"'{video_info['title']}' has been added to the playlist."}, broadcast=True)
     except Exception as e:
         print(f"Error adding video: {e}")
-
 
 
 def fetch_youtube_music_data(url):
