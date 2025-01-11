@@ -838,6 +838,25 @@ body.dark-mode #notification-overlay {
   background-color: #444;
 }
 
+.undo-button {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+}
+
+.undo-button:hover {
+  background-color: #0056b3;
+}
+
 .unselectable {
   user-select: none;
   -webkit-user-select: none; /* Safari */

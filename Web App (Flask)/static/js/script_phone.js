@@ -12,6 +12,8 @@ let swipeStartY = 0;
 let debounceTimer; // Timer for debounce
 const swipeThreshold = 50;
 const socket = io();
+let lastRemovedVideo = null;
+let isPlayPauseDebounced = false;
 
 // Cache DOM elements
 const inputField = document.getElementById("youtube-link");
@@ -271,11 +273,16 @@ socket.on("toggle_play_pause", (data) => {
  * Phone updates UI.
  */
 socket.on("sync_play_state", (data) => {
-  currentVideoId = data.video_id;
-  updatePlayPauseButton(data.state);
-  highlightCurrentVideo(data.video_id);
-  updateCurrentTitle(data.video_id);
-  showNotification(data.state === "playing" ? "Playing" : "Paused");
+  if (currentVideoId !== data.video_id || document.getElementById("play-pause-btn").getAttribute("data-state") !== data.state) {
+      currentVideoId = data.video_id;
+      updatePlayPauseButton(data.state);
+      highlightCurrentVideo(data.video_id);
+      updateCurrentTitle(data.video_id);
+      console.log(`Play state synced: ${data.state}, Video ID: ${data.video_id}`);
+      showNotification(data.state === "playing" ? "Playing" : "Paused");
+  } else {
+      console.log("Sync play state skipped; no changes.");
+  }
 });
 
 /**
@@ -429,28 +436,24 @@ function attachClickListener(videoItem) {
 }
 
 function attachSwipeListener(videoItem) {
+  let isSwiping = false;
+  let swipeStartX = 0;
+  const swipeThreshold = 50; // Minimum distance to trigger removal
+
   videoItem.addEventListener("touchstart", function (e) {
-    if (videoItem.classList.contains("playing")) {
-      isSwiping = false;
-      return;
-    }
+    if (videoItem.classList.contains("playing")) return; // Prevent swipe on the currently playing song
     isSwiping = true;
     swipeStartX = e.touches[0].clientX;
-    swipeStartY = e.touches[0].clientY;
-    videoItem.style.transition = "none";
+    videoItem.style.transition = "none"; // Disable animation during swipe
   });
 
   videoItem.addEventListener("touchmove", function (e) {
     if (!isSwiping) return;
     const swipeEndX = e.touches[0].clientX;
-    const swipeEndY = e.touches[0].clientY;
     const deltaX = swipeEndX - swipeStartX;
-    const deltaY = swipeEndY - swipeStartY;
 
-    if (
-      Math.abs(deltaX) > Math.abs(deltaY) &&
-      Math.abs(deltaX) > swipeThreshold
-    ) {
+    if (Math.abs(deltaX) > Math.abs(e.touches[0].clientY - swipeStartX)) {
+      // Horizontal swipe (prevents vertical scrolling interference)
       e.preventDefault();
       videoItem.style.transform = `translateX(${deltaX}px)`;
     }
@@ -460,35 +463,97 @@ function attachSwipeListener(videoItem) {
     if (!isSwiping) return;
     const swipeEndX = e.changedTouches[0].clientX;
     const deltaX = swipeEndX - swipeStartX;
+  
     isSwiping = false;
+  
     if (Math.abs(deltaX) > swipeThreshold) {
       if (deltaX < 0) {
-        // Swipe left => remove
+        // Swipe left => Remove video
         videoItem.style.transition =
           "transform 0.3s ease-out, background-color 0.3s ease-out";
         videoItem.style.transform = "translateX(-100%)";
         videoItem.style.backgroundColor = "red";
+  
         setTimeout(() => {
-          socket.emit("remove_video", {
-            id: parseInt(videoItem.getAttribute("data-id")),
-          });
+          const videoId = videoItem.getAttribute("data-video-id");
+          const videoIndex = Array.from(
+            document.querySelectorAll(".video-item")
+          ).indexOf(videoItem);
+  
+          // Capture removed video details
+          lastRemovedVideo = {
+            video_id: videoId,
+            index: videoIndex,
+            data: {
+              video_id: videoItem.getAttribute("data-video-id"),
+              title: videoItem.querySelector(".video-title").innerText,
+              thumbnail: videoItem.querySelector("img").src,
+              artist: videoItem.querySelector(".video-artist").innerText,
+            },
+          };
+  
+          // Emit remove event to the server
+          socket.emit("remove_video", { video_id: videoId });
+  
+          // Remove the video from the UI
           videoItem.remove();
-          showNotification("Video Removed");
+  
+          // Show undo notification
+          showNotification("Video removed.", "info", () => {
+            if (lastRemovedVideo) {
+              socket.emit("undo_remove_video", lastRemovedVideo);
+              lastRemovedVideo = null;
+            }
+          });
         }, 300);
       } else {
+        // Swipe right => Reset position
         videoItem.style.transition = "transform 0.3s ease-out";
         videoItem.style.transform = "translateX(0)";
       }
     } else {
+      // Insufficient swipe distance => Reset position
       videoItem.style.transition = "transform 0.3s ease-out";
       videoItem.style.transform = "translateX(0)";
     }
-  });
+  });  
+}
 
-  videoItem.addEventListener("touchcancel", function () {
-    isSwiping = false;
-    videoItem.style.transform = "translateX(0)";
-  });
+function removeVideo(videoId) {
+  const videoItem = document.querySelector(`.video-item[data-video-id="${videoId}"]`);
+  if (videoItem) {
+    // Save details of the removed video for undo
+    const videoIndex = Array.from(document.querySelectorAll(".video-item")).indexOf(videoItem);
+    lastRemovedVideo = {
+      id: videoItem.getAttribute("data-id"),
+      video_id: videoId,
+      index: videoIndex,
+      data: {
+        title: videoItem.querySelector(".video-title").innerText,
+        thumbnail: videoItem.querySelector("img").src,
+        artist: videoItem.querySelector(".video-artist").innerText,
+      },
+    };
+
+    // Remove the video from UI and notify server
+    videoItem.remove();
+    socket.emit("remove_video", { video_id: videoId });
+
+    // Show notification with Undo button
+    showNotification("Video removed.", "info", () => {
+      undoRemoveVideo();
+    });
+  }
+}
+
+function undoRemoveVideo() {
+  if (lastRemovedVideo) {
+    console.log("Undoing removal:", lastRemovedVideo); // Debugging log
+    socket.emit("undo_remove_video", lastRemovedVideo);
+    lastRemovedVideo = null;
+  } else {
+    showNotification("Nothing to undo.", "warning");
+  }
 }
 
 const sortable = new Sortable(document.getElementById("playlist"), {
@@ -597,6 +662,19 @@ function updatePlayPauseButton(state) {
   }
 }
 
+
+document.getElementById("play-pause-btn").addEventListener("click", () => {
+  if (isPlayPauseDebounced) return;
+
+  isPlayPauseDebounced = true;
+  socket.emit("play_pause");
+
+  setTimeout(() => {
+      isPlayPauseDebounced = false;
+  }, 500); // Debounce interval (500ms)
+});
+
+
 function formatDuration(seconds) {
   const hrs = Math.floor(seconds / 3600);
   const mins = Math.floor((seconds % 3600) / 60);
@@ -615,7 +693,7 @@ function formatTime(time) {
     : `${mins}:${secs.toString().padStart(2, "0")}`;
 }
 
-function showNotification(message, type = "info") {
+function showNotification(message, type = "info", undoCallback = null) {
   let notification = document.getElementById("notification-overlay");
   if (!notification) {
     notification = document.createElement("div");
@@ -634,18 +712,39 @@ function showNotification(message, type = "info") {
   notification.style.backgroundColor = styles.backgroundColor;
   notification.style.color = styles.color;
 
-  notification.textContent = message;
+  // Include undo button if callback is provided
+  notification.innerHTML = `${message}`;
+  if (undoCallback) {
+    const undoButton = document.createElement("button");
+    undoButton.textContent = "Undo";
+    undoButton.style.marginLeft = "10px";
+    undoButton.style.backgroundColor = "#fff";
+    undoButton.style.color = styles.backgroundColor;
+    undoButton.style.border = "none";
+    undoButton.style.cursor = "pointer";
+    undoButton.addEventListener("click", () => {
+      undoCallback();
+      notification.className = notification.className.replace("show", "");
+    });
+    notification.appendChild(undoButton);
+  }
+
   notification.className = "show";
   notification.style.left = "50%";
   notification.style.transform = "translateX(-50%)";
   notification.style.bottom = "20px";
 
-  // Set timeout to hide the notification
+  // Clear timeout to prevent stacking
   clearTimeout(currentNotificationTimeout);
-  currentNotificationTimeout = setTimeout(() => {
-    notification.className = notification.className.replace("show", "");
-  }, 3000); // Adjust the duration as needed (in milliseconds)
+
+  // Automatically hide notification after 3 seconds (skip if undo is available)
+  if (!undoCallback) {
+    currentNotificationTimeout = setTimeout(() => {
+      notification.className = notification.className.replace("show", "");
+    }, 3000);
+  }
 }
+
 
 // Listen for notification events emitted from the server
 socket.on("notification", function (data) {
