@@ -261,19 +261,17 @@ function showError(message) {
 //---------------------------------------------------------------------
 socket.on("update_playlist", function (data) {
   // Check if the song already exists in the playlist
-  const existingVideo = videoList.find((video) => video.video_id === data.video_id);
+  const alreadyExists = videoList.some((video) => video.video_id === data.video_id);
 
-  if (existingVideo) {
-    // Notify the user immediately about the duplicate
+  if (alreadyExists) {
+    // If it already exists, update its position in the list
+    videoList = videoList.filter((video) => video.video_id !== data.video_id);
+    videoList.push(data); // Move it to the bottom
+    updatePlaylist(videoList);
     showNotification(
-      `'${existingVideo.title}' is already in the playlist. It has been moved to the bottom.`,
+      `'${data.title}' is already in the playlist. It has been moved to the bottom.`,
       "info"
     );
-
-    // Move the existing video to the bottom of the list
-    videoList = videoList.filter((video) => video.video_id !== data.video_id);
-    videoList.push(existingVideo);
-    updatePlaylist(videoList); // Update the playlist after moving the video
   } else {
     // Add the new song
     videoList.push(data);
@@ -281,6 +279,8 @@ socket.on("update_playlist", function (data) {
     showNotification(`'${data.title}' has been successfully added to the playlist.`, "success");
   }
 });
+
+
 
 
 socket.on("update_list", function (data) {
@@ -746,13 +746,6 @@ function formatDuration(seconds) {
   return `${hrs ? hrs + ":" : ""}${mins}:${secs < 10 ? "0" : ""}${secs}`;
 }
 
-// Listen for notification events emitted from the server
-socket.on("notification", function (data) {
-  const message = data.message || "Notification received";
-  const type = data.type || "info"; // Default type is "info"
-  showNotification(message, type); // Use your showNotification function to display it
-});
-
 function showNotification(message, type = "info") {
   let notification = document.getElementById("notification-overlay");
   if (!notification) {
@@ -785,7 +778,12 @@ function showNotification(message, type = "info") {
   }, 3000); // Adjust the duration as needed (in milliseconds)
 }
 
-
+// Listen for notification events emitted from the server
+socket.on("notification", function (data) {
+  const message = data.message || "Notification received";
+  const type = data.type || "info"; // Default type is "info"
+  showNotification(message, type); // Use your showNotification function to display it
+});
 
 function getNotificationMessage(link) {
   if (!link) {

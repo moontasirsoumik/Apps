@@ -12,7 +12,6 @@ let swipeStartY = 0;
 let debounceTimer; // Timer for debounce
 const swipeThreshold = 50;
 const socket = io();
-let removedVideoBuffer = null;
 
 // Cache DOM elements
 const inputField = document.getElementById("youtube-link");
@@ -201,26 +200,27 @@ window.addEventListener("resize", positionSuggestions);
 //--------------------------------------------------------------------------
 socket.on("update_playlist", function (data) {
   // Check if the song already exists in the playlist
-  const existingVideo = videoList.find((video) => video.video_id === data.video_id);
+  const alreadyExists = videoList.some((video) => video.video_id === data.video_id);
 
-  if (existingVideo) {
-    // Notify the user immediately about the duplicate
+  if (alreadyExists) {
+    // If it already exists, update its position in the list
+    videoList = videoList.filter((video) => video.video_id !== data.video_id);
+    videoList.push(data); // Move it to the bottom
+    updatePlaylist(videoList);
     showNotification(
-      `${existingVideo.title} is already in the playlist. It has been moved to the bottom.`,
+      `'${data.title}' is already in the playlist. It has been moved to the bottom.`,
       "info"
     );
-
-    // Move the existing video to the bottom of the list
-    videoList = videoList.filter((video) => video.video_id !== data.video_id);
-    videoList.push(existingVideo);
-    updatePlaylist(videoList); // Update the playlist after moving the video
   } else {
     // Add the new song
     videoList.push(data);
     addVideoToList(data);
-    showNotification(`${data.title} has been successfully added to the playlist.`, "success");
+    showNotification(`'${data.title}' has been successfully added to the playlist.`, "success");
   }
 });
+
+
+
 
 socket.on("update_list", function (data) {
   videoList = data;
@@ -469,13 +469,11 @@ function attachSwipeListener(videoItem) {
         videoItem.style.transform = "translateX(-100%)";
         videoItem.style.backgroundColor = "red";
         setTimeout(() => {
-          const videoTitle = videoItem.querySelector(".video-title").textContent;
-          const videoArtist = videoItem.querySelector(".video-artist").textContent;
           socket.emit("remove_video", {
             id: parseInt(videoItem.getAttribute("data-id")),
           });
           videoItem.remove();
-          showNotification(`${videoTitle} by ${videoArtist} has been removed.`, "info");
+          showNotification("Video Removed");
         }, 300);
       } else {
         videoItem.style.transition = "transform 0.3s ease-out";
@@ -492,33 +490,6 @@ function attachSwipeListener(videoItem) {
     videoItem.style.transform = "translateX(0)";
   });
 }
-
-function removeVideo(videoItem) {
-  const videoTitle = videoItem.querySelector(".video-title").textContent;
-  removedVideoBuffer = {
-    video: videoItem,
-    id: parseInt(videoItem.getAttribute("data-id")),
-  };
-
-  videoItem.remove();
-  showNotification(
-    `'${videoTitle}' has been removed. <button onclick="undoRemove()">Undo</button>`,
-    "info"
-  );
-  setTimeout(() => {
-    removedVideoBuffer = null; // Clear buffer if not restored
-  }, 5000);
-}
-
-function undoRemove() {
-  if (removedVideoBuffer) {
-    document.getElementById("playlist").appendChild(removedVideoBuffer.video);
-    socket.emit("add_video_back", { id: removedVideoBuffer.id });
-    showNotification(`'${removedVideoBuffer.video.querySelector(".video-title").textContent}' has been restored.`, "success");
-    removedVideoBuffer = null;
-  }
-}
-
 
 const sortable = new Sortable(document.getElementById("playlist"), {
   animation: 150,
@@ -644,12 +615,6 @@ function formatTime(time) {
     : `${mins}:${secs.toString().padStart(2, "0")}`;
 }
 
-socket.on("notification", function (data) {
-  const message = data.message || "Notification received";
-  const type = data.type || "info"; // Default type is "info"
-  showNotification(message, type); // Use your showNotification function to display it
-});
-
 function showNotification(message, type = "info") {
   let notification = document.getElementById("notification-overlay");
   if (!notification) {
@@ -680,6 +645,28 @@ function showNotification(message, type = "info") {
   currentNotificationTimeout = setTimeout(() => {
     notification.className = notification.className.replace("show", "");
   }, 3000); // Adjust the duration as needed (in milliseconds)
+}
+
+// Listen for notification events emitted from the server
+socket.on("notification", function (data) {
+  const message = data.message || "Notification received";
+  const type = data.type || "info"; // Default type is "info"
+  showNotification(message, type); // Use your showNotification function to display it
+});
+
+
+function getNotificationMessage(link) {
+  if (!link) {
+    return "Content Added";
+  }
+  if (link.includes("list=")) {
+    return "Playlist Added";
+  } else if (link.includes("music.youtube.com")) {
+    return "Music Added";
+  } else if (link.includes("youtube.com") || link.includes("youtu.be")) {
+    return "Video Added";
+  }
+  return "Content Added";
 }
 
 function showVolumeOverlay(volume) {
