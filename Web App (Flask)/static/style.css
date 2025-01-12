@@ -64,15 +64,16 @@ body.dark-mode .controls-card,
 
 .container {
   width: 92%;
-  max-width: 1200px;
+  max-width: 1200px; /* Ensure container doesn't overflow */
   max-height: 98vh;
   background-color: #fff;
   border-radius: 15px;
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-x: hidden; /* Prevent horizontal overflow */
   transition: max-height 0.3s;
+  padding-right: 10px; /* Add padding to prevent cropping */
 }
 
 .dark-mode .container {
@@ -354,6 +355,18 @@ body.dark-mode .video-artist {
   height: 60px;
   min-height: 60px;
   overflow: hidden;
+  margin-right: 1.5px; /* Add margin to prevent cropping */
+}
+
+/* Add a responsive fix for smaller screens */
+@media screen and (max-width: 768px) {
+  .container {
+    width: 95%; /* Adjust width for smaller devices */
+    padding-right: 8px; /* Ensure no horizontal scrolling */
+  }
+  .video-item {
+    margin-right: 1px; /* Reduce margin for smaller screens */
+  }
 }
 
 .video-item.removing {
@@ -362,17 +375,13 @@ body.dark-mode .video-artist {
   transition: transform 0.3s ease-out, background-color 0.3s ease-out;
 }
 
-/* Highlight Played Songs */
 .video-item.played {
-  border: 2px dashed #4caf50; /* Green dashed border */
-  background-color: #e8f5e9; /* Light green background */
+  border: 1px solid #a0a0a0; /* Noticeably darker gray for light mode */
 }
 
 .dark-mode .video-item.played {
-  border-color: #81c784; /* Adjust border color for dark mode */
-  background-color: #2e7d32; /* Darker green background */
+  border: 1px solid #707070; /* Noticeably lighter gray for dark mode */
 }
-
 
 @media (hover: hover) and (pointer: fine) {
   .video-item:hover {

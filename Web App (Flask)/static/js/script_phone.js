@@ -382,6 +382,17 @@ document.getElementById("volume-slider").addEventListener("input", function () {
   showVolumeOverlay(volume);
 });
 
+document.getElementById("crossfade-toggle").addEventListener("change", (e) => {
+  const enabled = e.target.checked;
+  socket.emit("update_crossfade", { enabled });
+});
+
+document.getElementById("normalize-toggle").addEventListener("change", (e) => {
+  const enabled = e.target.checked;
+  socket.emit("update_normalize", { enabled });
+});
+
+
 //--------------------------------------------------------------------------
 // 6) Playlist, Swiping, Sorting
 //--------------------------------------------------------------------------

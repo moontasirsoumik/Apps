@@ -6,6 +6,9 @@ import random
 from youtubesearchpython.extras import Video
 from youtubesearchpython import Playlist as YTPlaylist, VideosSearch
 from ytmusicapi import YTMusic 
+from pydub import AudioSegment
+from pydub.playback import play
+
 played_songs = set()
 
 app = Flask(__name__)
@@ -416,7 +419,8 @@ def handle_progress_update(data):
 
 @socketio.on("play_next_video")
 def handle_play_next_video():
-    play_next_video()
+    # play_next_video()
+    play_next_video_with_crossfade
 
 def play_next_video():
     global current_video_id, player_state
@@ -435,6 +439,51 @@ def play_next_video():
         emit(
             "play_video",
             {"video_id": current_video_id, "title": next_video["title"]},
+            broadcast=True,
+        )
+        
+@socketio.on("update_crossfade")
+def handle_update_crossfade(data):
+    global crossfade_enabled
+    crossfade_enabled = data.get("enabled", False)
+
+@socketio.on("update_normalize")
+def handle_update_normalize(data):
+    global normalize_enabled
+    normalize_enabled = data.get("enabled", False)
+
+def play_next_video_with_crossfade():
+    global current_video_id, player_state, video_list
+
+    current_index = next(
+        (
+            index
+            for index, video in enumerate(video_list)
+            if video["video_id"] == current_video_id
+        ),
+        -1,
+    )
+
+    if current_index != -1 and current_index < len(video_list) - 1:
+        current_video = video_list[current_index]
+        next_video = video_list[current_index + 1]
+
+        # Fetch the audio for both videos
+        current_audio = AudioSegment.from_file(current_video["stream_url"], format="mp4")
+        next_audio = AudioSegment.from_file(next_video["stream_url"], format="mp4")
+
+        # Crossfade the audio
+        crossfaded_audio = current_audio.append(next_audio, crossfade=3000)  # 3-second crossfade
+
+        # Save the crossfaded audio as a temporary file
+        temp_file = "/tmp/crossfaded_audio.mp3"
+        crossfaded_audio.export(temp_file, format="mp3")
+
+        current_video_id = next_video["video_id"]
+        player_state = "playing"
+        emit(
+            "play_video",
+            {"video_id": current_video_id, "title": next_video["title"], "stream_url": temp_file},
             broadcast=True,
         )
 
@@ -475,9 +524,16 @@ def stream():
         }
         with yt_dlp.YoutubeDL(ydl_opts_audio) as ydl:
             info_dict = ydl.extract_info(url, download=False)
-            stream_url = info_dict["url"]
+            stream_url = info_dict.get("url")
+            if not stream_url:
+                raise ValueError("Failed to extract stream URL")
+
+            # Debugging
+            print(f"Extracted stream URL: {stream_url}")
+
             return jsonify({"stream_url": stream_url, "type": "audio"})
     except Exception as e:
+        print(f"Error in /stream: {e}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
