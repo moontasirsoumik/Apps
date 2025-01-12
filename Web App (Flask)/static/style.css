@@ -838,24 +838,6 @@ body.dark-mode #notification-overlay {
   background-color: #444;
 }
 
-.undo-button {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  padding: 10px 20px;
-  font-size: 16px;
-  cursor: pointer;
-  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-  z-index: 1000;
-}
-
-.undo-button:hover {
-  background-color: #0056b3;
-}
 
 .unselectable {
   user-select: none;
@@ -864,20 +846,19 @@ body.dark-mode #notification-overlay {
   -ms-user-select: none; /* IE10+/Edge */
 }
 
-.undo-btn {
+#undo-button {
   background-color: #fff;
   color: #007bff;
-  border: none;
-  border-radius: 4px;
+  border: 1px solid #007bff;
   padding: 5px 10px;
-  margin-left: 10px;
+  border-radius: 3px;
   cursor: pointer;
-  font-weight: bold;
+  font-size: 14px;
 }
 
-.undo-btn:hover {
-  background-color: #e0e0e0;
-  color: #0056b3;
+#undo-button:hover {
+  background-color: #007bff;
+  color: #fff;
 }
 
 
