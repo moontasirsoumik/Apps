@@ -30,6 +30,11 @@ def home():
 @socketio.on("new_video")
 def handle_new_video(data):
     try:
+        undo = data["undo"]
+    except: 
+        undo = False
+    print("Hnadle: ", undo)
+    try:
         if "list=" in data["link"]:
             # Fetch playlist videos using youtubesearchpython
             videos = fetch_videos_from_playlist(data["link"])
@@ -37,7 +42,7 @@ def handle_new_video(data):
                 video_list.append(video)
                 emit("update_playlist", video, broadcast=True)
         else:
-            add_video_to_list(data["link"])
+            add_video_to_list(data["link"], undo)
     except Exception as e:
         print(f"Error adding video: {e}")
         print(data)
@@ -50,7 +55,8 @@ def extract_video_id(url):
         return url.split("youtu.be/")[1].split("?")[0]
     return None
 
-def add_video_to_list(url):
+def add_video_to_list(url, undo = False):
+    print("Add video: ", undo)
     try:
         # Extract video ID from URL
         video_id = extract_video_id(url)
@@ -74,12 +80,15 @@ def add_video_to_list(url):
             video_info = fetch_youtube_music_data(music_url)
             if video_info:
                 video_info.update({
-                    "id": len(video_list),
-                    "video_id": video_id,
-                })
+                "id": len(video_list),
+                "video_id": video_id,
+                "isUndo": undo  # Add this flag
+            })
                 video_list.append(video_info)
                 emit("update_playlist", video_info, broadcast=True)
-                emit("notification", {"message": f"'{video_info['title']}' has been added to the playlist."}, broadcast=True)
+                if not undo:
+                    print(undo)
+                    emit("notification", {"message": f"'{video_info['title']}' has been added to the playlist."}, broadcast=True)
                 return  # Success: Exit function
         except Exception as e:
             print(f"Failed to fetch from YouTube Music: {e}")
@@ -90,10 +99,12 @@ def add_video_to_list(url):
             video_info.update({
                 "id": len(video_list),
                 "video_id": video_id,
+                "isUndo": undo  # Add this flag
             })
             video_list.append(video_info)
             emit("update_playlist", video_info, broadcast=True)
-            emit("notification", {"message": f"'{video_info['title']}' has been added to the playlist."}, broadcast=True)
+            if not undo:
+                emit("notification", {"message": f"'{video_info['title']}' has been added to the playlist."}, broadcast=True)
     except Exception as e:
         print(f"Error adding video: {e}")
 

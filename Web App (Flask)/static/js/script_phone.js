@@ -200,28 +200,31 @@ window.addEventListener("resize", positionSuggestions);
 // 2) Socket.IO Event Handlers (Phone as Remote)
 //--------------------------------------------------------------------------
 socket.on("update_playlist", function (data) {
-  // Check if the song already exists in the playlist
+  console.log("Received data:", data);
+
   const alreadyExists = videoList.some((video) => video.video_id === data.video_id);
 
   if (alreadyExists) {
     // If it already exists, update its position in the list
     videoList = videoList.filter((video) => video.video_id !== data.video_id);
-    videoList.push(data); // Move it to the bottom
+    videoList.push(data);
     updatePlaylist(videoList);
-    showNotification(
-      `'${data.title}' is already in the playlist. It has been moved to the bottom.`,
-      "info"
-    );
+
+    // Notify if moved to the bottom
+    showNotification(`'${data.title}' is already in the playlist. It has been moved to the bottom.`, "info");
   } else {
-    // Add the new song
+    // Add the new video
     videoList.push(data);
     addVideoToList(data);
-    showNotification(`'${data.title}' has been successfully added to the playlist.`, "success");
+
+    // Check if this was an undo action
+    if (data.isUndo) {
+      showNotification("Undo successful. Song added back to playlist.", "success");
+    } else {
+      showNotification(`'${data.title}' has been successfully added to the playlist.`, "success");
+    }
   }
 });
-
-
-
 
 socket.on("update_list", function (data) {
   videoList = data;
@@ -693,17 +696,17 @@ function formatTime(time) {
 function showNotification(message, type = "info", undo = false, link = null) {
   let notification = document.getElementById("notification-overlay");
   if (!notification) {
-      notification = document.createElement("div");
-      notification.id = "notification-overlay";
-      document.body.appendChild(notification);
+    notification = document.createElement("div");
+    notification.id = "notification-overlay";
+    document.body.appendChild(notification);
   }
 
   // Style notification based on type
   const typeStyles = {
-      info: { backgroundColor: "#007bff", color: "#fff" },
-      success: { backgroundColor: "#28a745", color: "#fff" },
-      warning: { backgroundColor: "#ffc107", color: "#212529" },
-      error: { backgroundColor: "#dc3545", color: "#fff" },
+    info: { backgroundColor: "#007bff", color: "#fff" },
+    success: { backgroundColor: "#28a745", color: "#fff" },
+    warning: { backgroundColor: "#ffc107", color: "#212529" },
+    error: { backgroundColor: "#dc3545", color: "#fff" },
   };
   const styles = typeStyles[type] || typeStyles.info;
   notification.style.backgroundColor = styles.backgroundColor;
@@ -714,9 +717,9 @@ function showNotification(message, type = "info", undo = false, link = null) {
       <span style="font-size: 16px; margin-right: 10px;">${message}</span>
   `;
   if (undo && link) {
-      const undoButton = document.createElement("button");
-      undoButton.textContent = "Undo";
-      undoButton.style.cssText = `
+    const undoButton = document.createElement("button");
+    undoButton.textContent = "Undo";
+    undoButton.style.cssText = `
           font-size: 16px;
           font-weight: bold;
           color: #fff;
@@ -728,17 +731,17 @@ function showNotification(message, type = "info", undo = false, link = null) {
           transition: transform 0.2s, background-color 0.2s;
           margin-left: 10px;
       `;
-      undoButton.addEventListener("mouseover", () => {
-          undoButton.style.backgroundColor = "#d32f2f";
-      });
-      undoButton.addEventListener("mouseout", () => {
-          undoButton.style.backgroundColor = "#f44336";
-      });
-      undoButton.addEventListener("click", () => {
-          socket.emit("new_video", { link: link });
-          showNotification("Undo successful. Song added back to playlist.", "success");
-      });
-      notification.appendChild(undoButton);
+    undoButton.addEventListener("mouseover", () => {
+      undoButton.style.backgroundColor = "#d32f2f";
+    });
+    undoButton.addEventListener("mouseout", () => {
+      undoButton.style.backgroundColor = "#f44336";
+    });
+    undoButton.addEventListener("click", () => { 
+      socket.emit("new_video", { link: link, undo: true }); 
+      showNotification("Undo successful. Song added back to playlist.", "success"); 
+    });    
+    notification.appendChild(undoButton);
   }
 
   notification.className = "show";
@@ -752,8 +755,30 @@ function showNotification(message, type = "info", undo = false, link = null) {
   // Set timeout to hide the notification
   clearTimeout(currentNotificationTimeout);
   currentNotificationTimeout = setTimeout(() => {
-      notification.className = notification.className.replace("show", "");
-  }, 5000); // Adjust the duration as needed
+    hideNotification();
+  }, 2000); // Adjust the duration as needed
+
+  // Add event listeners to detect outside clicks/touches
+  setTimeout(() => {
+    document.addEventListener("click", handleOutsideClick, { once: true });
+    document.addEventListener("touchstart", handleOutsideTouch, { once: true });
+  }, 0);
+}
+
+function hideNotification() {
+  const notification = document.getElementById("notification-overlay");
+  if (notification) {
+    notification.className = notification.className.replace("show", "");
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification);
+      }
+    }, 300); // Allow the fade-out animation to complete
+  }
+
+  // Remove event listeners
+  document.removeEventListener("click", handleOutsideClick);
+  document.removeEventListener("touchstart", handleOutsideTouch);
 }
 
 
@@ -836,14 +861,27 @@ function showContextMenu(videoItem, x, y) {
   const existingMenu = document.getElementById("context-menu");
   if (existingMenu) existingMenu.remove();
 
+  const videoId = videoItem.getAttribute("data-video-id");
+  const isCurrentPlaying = videoId === currentVideoId;
+  const hasCurrentPlaying = !!currentVideoId;
+
   const contextMenu = document.createElement("div");
   contextMenu.id = "context-menu";
   contextMenu.className = "context-menu";
-  contextMenu.innerHTML = `
+
+  let menuHtml = `
       <div class="context-menu-item" onclick="copyToClipboard('${videoItem.getAttribute(
         "data-url"
       )}')">Copy Link</div>
   `;
+
+  if (hasCurrentPlaying && !isCurrentPlaying) {
+    menuHtml += `
+      <div class="context-menu-item" onclick="playNext('${videoId}')">Play Next</div>
+    `;
+  }
+
+  contextMenu.innerHTML = menuHtml;
   document.body.appendChild(contextMenu);
 
   const menuHeight = contextMenu.offsetHeight;
@@ -857,10 +895,42 @@ function showContextMenu(videoItem, x, y) {
   }, 0);
 }
 
+function playNext(videoId) {
+  const currentIndex = videoList.findIndex((video) => video.video_id === currentVideoId);
+  const nextIndex = currentIndex + 1;
+
+  const videoIndex = videoList.findIndex((video) => video.video_id === videoId);
+
+  if (currentIndex !== -1 && videoIndex !== -1 && nextIndex !== videoIndex) {
+    // Remove the video from its current position
+    const [video] = videoList.splice(videoIndex, 1);
+
+    // If the video is before the current song, decrement the next index to account for the removal
+    const adjustedNextIndex = videoIndex < nextIndex ? nextIndex - 1 : nextIndex;
+
+    // Insert the video into the correct position
+    videoList.splice(adjustedNextIndex, 0, video);
+
+    // Update the playlist display
+    updatePlaylist(videoList);
+
+    // Notify server about the reordering
+    const order = videoList.map((video) => video.id);
+    socket.emit("reorder_videos", { order });
+
+    // Show notification
+    showNotification(`'${video.title}' will play next.`);
+  }
+
+  hideContextMenu();
+}
+
+
+
 function handleOutsideClick(event) {
   const contextMenu = document.getElementById("context-menu");
   const inputField = document.getElementById("youtube-link");
-
+  const notification = document.getElementById("notification-overlay");
   // Check and hide context menu
   if (contextMenu && !contextMenu.contains(event.target)) {
     hideContextMenu();
@@ -874,12 +944,17 @@ function handleOutsideClick(event) {
     event.target !== inputField
   ) {
     hideSuggestions();
+  }
+
+  if (notification && !notification.contains(event.target)) {
+    hideNotification();
   }
 }
 
 function handleOutsideTouch(event) {
   const contextMenu = document.getElementById("context-menu");
   const inputField = document.getElementById("youtube-link");
+  const notification = document.getElementById("notification-overlay");
 
   // Check and hide context menu
   if (contextMenu && !contextMenu.contains(event.target)) {
@@ -894,6 +969,10 @@ function handleOutsideTouch(event) {
     event.target !== inputField
   ) {
     hideSuggestions();
+  }
+
+  if (notification && !notification.contains(event.target)) {
+    hideNotification();
   }
 }
 

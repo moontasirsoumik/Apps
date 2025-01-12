@@ -260,23 +260,29 @@ function showError(message) {
 // 2) Socket.IO Event Handlers
 //---------------------------------------------------------------------
 socket.on("update_playlist", function (data) {
-  // Check if the song already exists in the playlist
+  console.log("Received data:", data);
+
   const alreadyExists = videoList.some((video) => video.video_id === data.video_id);
 
   if (alreadyExists) {
     // If it already exists, update its position in the list
     videoList = videoList.filter((video) => video.video_id !== data.video_id);
-    videoList.push(data); // Move it to the bottom
+    videoList.push(data);
     updatePlaylist(videoList);
-    showNotification(
-      `'${data.title}' is already in the playlist. It has been moved to the bottom.`,
-      "info"
-    );
+
+    // Notify if moved to the bottom
+    showNotification(`'${data.title}' is already in the playlist. It has been moved to the bottom.`, "info");
   } else {
-    // Add the new song
+    // Add the new video
     videoList.push(data);
     addVideoToList(data);
-    showNotification(`'${data.title}' has been successfully added to the playlist.`, "success");
+
+    // Check if this was an undo action
+    if (data.isUndo) {
+      showNotification("Undo successful. Song added back to playlist.", "success");
+    } else {
+      showNotification(`'${data.title}' has been successfully added to the playlist.`, "success");
+    }
   }
 });
 
@@ -746,36 +752,70 @@ function formatDuration(seconds) {
   return `${hrs ? hrs + ":" : ""}${mins}:${secs < 10 ? "0" : ""}${secs}`;
 }
 
-function showNotification(message, type = "info") {
+function showNotification(message, type = "info", undo = false, link = null) {
   let notification = document.getElementById("notification-overlay");
   if (!notification) {
-    notification = document.createElement("div");
-    notification.id = "notification-overlay";
-    document.body.appendChild(notification);
+      notification = document.createElement("div");
+      notification.id = "notification-overlay";
+      document.body.appendChild(notification);
   }
 
   // Style notification based on type
   const typeStyles = {
-    info: { backgroundColor: "#007bff", color: "#fff" },
-    success: { backgroundColor: "#28a745", color: "#fff" },
-    warning: { backgroundColor: "#ffc107", color: "#212529" },
-    error: { backgroundColor: "#dc3545", color: "#fff" },
+      info: { backgroundColor: "#007bff", color: "#fff" },
+      success: { backgroundColor: "#28a745", color: "#fff" },
+      warning: { backgroundColor: "#ffc107", color: "#212529" },
+      error: { backgroundColor: "#dc3545", color: "#fff" },
   };
   const styles = typeStyles[type] || typeStyles.info;
   notification.style.backgroundColor = styles.backgroundColor;
   notification.style.color = styles.color;
 
-  notification.textContent = message;
+  // Add message and undo button if applicable
+  notification.innerHTML = `
+      <span style="font-size: 16px; margin-right: 10px;">${message}</span>
+  `;
+  if (undo && link) {
+      const undoButton = document.createElement("button");
+      undoButton.textContent = "Undo";
+      undoButton.style.cssText = `
+          font-size: 16px;
+          font-weight: bold;
+          color: #fff;
+          background-color: #f44336;
+          border: none;
+          border-radius: 5px;
+          padding: 8px 16px;
+          cursor: pointer;
+          transition: transform 0.2s, background-color 0.2s;
+          margin-left: 10px;
+      `;
+      undoButton.addEventListener("mouseover", () => {
+          undoButton.style.backgroundColor = "#d32f2f";
+      });
+      undoButton.addEventListener("mouseout", () => {
+          undoButton.style.backgroundColor = "#f44336";
+      });
+      undoButton.addEventListener("click", () => { 
+        socket.emit("new_video", { link: link, undo: true }); 
+        showNotification("Undo successful. Song added back to playlist.", "success"); 
+      });      
+      notification.appendChild(undoButton);
+  }
+
   notification.className = "show";
   notification.style.left = "50%";
   notification.style.transform = "translateX(-50%)";
   notification.style.bottom = "20px";
+  notification.style.padding = "12px 20px";
+  notification.style.borderRadius = "10px";
+  notification.style.boxShadow = "0px 4px 10px rgba(0, 0, 0, 0.2)";
 
   // Set timeout to hide the notification
   clearTimeout(currentNotificationTimeout);
   currentNotificationTimeout = setTimeout(() => {
-    notification.className = notification.className.replace("show", "");
-  }, 3000); // Adjust the duration as needed (in milliseconds)
+      notification.className = notification.className.replace("show", "");
+  }, 2000); // Adjust the duration as needed
 }
 
 // Listen for notification events emitted from the server
