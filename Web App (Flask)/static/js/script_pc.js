@@ -286,13 +286,10 @@ socket.on("update_playlist", function (data) {
   }
 });
 
-
-
-
 socket.on("update_list", function (data) {
-  updatePlaylist(data);
   videoList = data;
-  highlightCurrentVideo(currentVideoId);
+  updatePlaylist(videoList); // Re-render the updated playlist
+  highlightCurrentVideo(currentVideoId); // Highlight the currently playing song
 });
 
 socket.on("play_video", async function (data) {

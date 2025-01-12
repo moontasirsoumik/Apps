@@ -228,8 +228,8 @@ socket.on("update_playlist", function (data) {
 
 socket.on("update_list", function (data) {
   videoList = data;
-  updatePlaylist(data);
-  highlightCurrentVideo(currentVideoId);
+  updatePlaylist(videoList); // Re-render the updated playlist
+  highlightCurrentVideo(currentVideoId); // Highlight the currently playing song
 });
 
 /**

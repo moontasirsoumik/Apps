@@ -304,24 +304,40 @@ def search_suggestions():
 @socketio.on("shuffle_playlist")
 def handle_shuffle_playlist():
     global video_list, current_video_id
+
     if current_video_id:
+        # Find the index of the currently playing song
         current_index = next(
-            (
-                index
-                for index, video in enumerate(video_list)
-                if video["video_id"] == current_video_id
-            ),
+            (index for index, video in enumerate(video_list) if video["video_id"] == current_video_id),
             -1,
         )
+
         if current_index != -1:
-            played_videos = video_list[: current_index + 1]
-            unplayed_videos = video_list[current_index + 1 :]
+            # Separate played and unplayed songs
+            played_videos = [video for video in video_list if video.get("played", False)]
+            unplayed_videos = [video for video in video_list if not video.get("played", False)]
+
+            # Shuffle unplayed videos
             random.shuffle(unplayed_videos)
-            video_list = played_videos + unplayed_videos
+
+            # Remove the current playing song from played_videos if it exists
+            current_song = video_list[current_index]
+            if current_song in played_videos:
+                played_videos.remove(current_song)
+
+            # Reassemble the playlist: played above, current playing, unplayed below
+            video_list = (
+                played_videos
+                + [current_song]  # Add current playing song
+                + [video for video in unplayed_videos if video["video_id"] != current_video_id]
+            )
     else:
+        # If no current playing song, shuffle everything
         random.shuffle(video_list)
+
     emit("update_list", video_list, broadcast=True)
     emit("playlist_shuffled", broadcast=True)
+
 
 @socketio.on("reorder_videos")
 def handle_reorder_videos(data):
