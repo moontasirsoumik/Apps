@@ -6,6 +6,7 @@ import random
 from youtubesearchpython.extras import Video
 from youtubesearchpython import Playlist as YTPlaylist, VideosSearch
 from ytmusicapi import YTMusic 
+played_songs = set()
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "my_secret_key"
@@ -367,10 +368,18 @@ def handle_sync_play_state(data):
 
 @socketio.on("play_video")
 def handle_play_video(data):
-    global current_video_id, player_state
+    global current_video_id, player_state, played_songs
     current_video_id = data["video_id"]
     player_state = "playing"
+    
+    # Mark the video as played
+    played_songs.add(current_video_id)
+    for video in video_list:
+        video["played"] = video["video_id"] in played_songs
+
     emit("play_video", data, broadcast=True)
+    emit("update_list", video_list, broadcast=True)
+
 
 @socketio.on("play_pause")
 def handle_play_pause():

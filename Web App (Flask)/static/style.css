@@ -362,6 +362,18 @@ body.dark-mode .video-artist {
   transition: transform 0.3s ease-out, background-color 0.3s ease-out;
 }
 
+/* Highlight Played Songs */
+.video-item.played {
+  border: 2px dashed #4caf50; /* Green dashed border */
+  background-color: #e8f5e9; /* Light green background */
+}
+
+.dark-mode .video-item.played {
+  border-color: #81c784; /* Adjust border color for dark mode */
+  background-color: #2e7d32; /* Darker green background */
+}
+
+
 @media (hover: hover) and (pointer: fine) {
   .video-item:hover {
     background-color: #f0f0f0;

@@ -481,7 +481,7 @@ if (player) {
 function addVideoToList(video) {
   const playlist = document.getElementById("playlist");
   const videoItem = document.createElement("div");
-  videoItem.className = "video-item";
+  videoItem.className = `video-item ${video.played ? "played" : ""}`;
   videoItem.setAttribute("data-id", video.id);
   videoItem.setAttribute("data-video-id", video.video_id);
   videoItem.innerHTML = `

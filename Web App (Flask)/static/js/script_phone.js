@@ -388,13 +388,9 @@ document.getElementById("volume-slider").addEventListener("input", function () {
 function addVideoToList(video) {
   const playlist = document.getElementById("playlist");
   const videoItem = document.createElement("div");
-  videoItem.className = "video-item unselectable";
+  videoItem.className = `video-item ${video.played ? "played" : ""}`;
   videoItem.setAttribute("data-id", video.id);
   videoItem.setAttribute("data-video-id", video.video_id);
-  videoItem.setAttribute(
-    "data-url",
-    `https://www.youtube.com/watch?v=${video.video_id}`
-  ); // Set the correct video URL
   videoItem.innerHTML = `
     <img class="drag-area" src="${video.thumbnail}" alt="${video.title}">
     <div class="video-info">
@@ -402,7 +398,7 @@ function addVideoToList(video) {
       <p class="video-artist">${
         video.artist ? video.artist : video.creator
       }</p>
-      ${video.album ? `<p class=".suggestion-item">Album: ${video.album}</p>` : ""}
+      ${video.album ? `<p class="video-meta">Album: ${video.album}</p>` : ""}
     </div>
   `;
   playlist.appendChild(videoItem);
