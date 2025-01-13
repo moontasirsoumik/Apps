@@ -197,6 +197,55 @@ body.dark-mode .video-artist {
   color: #ddd;
 }
 
+.controls-card {
+  background-color: #fff; 
+  border-radius: 15px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.3s ease, margin 0.3s ease, padding 0.3s ease;
+
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none; /* Prevent interaction while collapsed */
+
+  margin: 0 !important; /* Fully collapse margins */
+  padding: 0 !important; /* Fully collapse padding */
+  border: none !important; /* Hide borders in collapsed state */
+}
+
+.controls-card.expanded {
+  max-height: 200px; /* Ensure this matches your content height */
+  opacity: 1;
+  pointer-events: auto; /* Allow interaction when expanded */
+
+  margin-bottom: 10px !important;  
+  padding: 10px !important;
+}
+
+
+
+
+.primary-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.toggle-controls-btn {
+  height: 20px;
+  width: 10px !important;
+}
+
+
+@media (hover: hover) and (pointer: fine) {
+  .toggle-controls-btn:hover {
+    background-color: #007bff;
+    color: #fff;
+  }
+}
+
+
 .controls,
 .playback-controls {
   display: flex;
