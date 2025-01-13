@@ -13,6 +13,8 @@ let debounceTimer; // Timer for debounce
 const swipeThreshold = 50;
 const socket = io();
 let lastDeletedSongLink = null;
+let loopState = 0;
+let currentLoopState = 0;
 
 // Cache DOM elements
 const inputField = document.getElementById("youtube-link");
@@ -29,6 +31,101 @@ document.getElementById("youtube-link").addEventListener("input", function () {
     hideSuggestions();
   }
 });
+
+// 1) PREVIOUS button
+document.getElementById("prev-btn").addEventListener("click", () => {
+  // We only try if there's some currentVideoId
+  if (currentVideoId) {
+    socket.emit("play_previous_video");
+  }
+});
+
+// 2) NEXT button
+document.getElementById("next-btn").addEventListener("click", () => {
+  // We only try if there's some currentVideoId
+  if (currentVideoId) {
+    socket.emit("play_next_video");
+  }
+});
+
+document.getElementById("loop-btn").addEventListener("click", () => {
+  const loopBtn = document.getElementById("loop-btn");
+  const icon = loopBtn.querySelector("i");
+
+  // Cycle through loop states
+  loopState = (loopState + 1) % 3;
+
+  // Update button appearance and functionality
+  switch (loopState) {
+    case 0: // Loop Off
+      loopBtn.className = "";
+      loopBtn.title = "Loop Off";
+      icon.className = "fas fa-repeat";
+      player.loop = false;
+      break;
+    case 1: // Loop Once
+      loopBtn.className = "loop-once";
+      loopBtn.title = "Loop Once";
+      icon.className = "fas fa-arrow-right";
+      player.loop = false;
+      break;
+    case 2: // Loop Indefinitely
+      loopBtn.className = "loop-indefinite";
+      loopBtn.title = "Loop Indefinitely";
+      icon.className = "fas fa-infinity";
+      player.loop = true;
+      break;
+  }
+
+  // Notify backend of the current loop state
+  socket.emit("update_loop_state", { loopState });
+});
+
+// Receive loop state updates from frontend
+socket.on("update_loop_state", (data) => {
+  currentLoopState = data.loopState;
+});
+
+// Handle song playback logic
+socket.on("play_next_video", (data) => {
+  const { currentVideoId } = data;
+
+  // Determine playback behavior based on loop state
+  if (currentLoopState === 1) {
+    // Loop Once: Replay current video once, then proceed
+    socket.emit("play_video", { video_id: currentVideoId });
+    currentLoopState = 0; // Reset loop state after one repeat
+  } else if (currentLoopState === 2) {
+    // Loop Indefinitely: Replay current video
+    socket.emit("play_video", { video_id: currentVideoId });
+  } else {
+    // Loop Off: Play the next song as usual
+    const nextVideoId = getNextVideoId(currentVideoId); // Implement this helper function
+    if (nextVideoId) {
+      socket.emit("play_video", { video_id: nextVideoId });
+    } else {
+      socket.emit("playlist_ended");
+    }
+  }
+
+  // Sync frontend with the current playback state
+  socket.emit("sync_play_state", { video_id: currentVideoId, loopState: currentLoopState });
+});
+
+function getNextVideoId(currentVideoId) {
+  const currentIndex = videoList.findIndex((video) => video.video_id === currentVideoId);
+  if (currentIndex === -1 || currentIndex >= videoList.length - 1) {
+    return null; // End of playlist
+  }
+  return videoList[currentIndex + 1].video_id;
+}
+
+
+function playNextOnce() {
+  player.loop = false;
+  socket.emit("play_next_video");
+  player.removeEventListener("ended", playNextOnce); // Ensure it doesn't keep looping
+}
 
 function scrollToPlayingSong() {
   if (currentVideoId) {

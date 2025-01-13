@@ -418,16 +418,37 @@ def handle_progress_update(data):
 def handle_play_next_video():
     play_next_video()
 
+@socketio.on("play_previous_video")
+def handle_play_previous_video():
+    play_previous_video()
+
+def play_previous_video():
+    global current_video_id, player_state
+
+    # If there's no current song, do nothing
+    current_index = next(
+        (index for index, v in enumerate(video_list) if v["video_id"] == current_video_id),
+        -1,
+    )
+    # If we are not at the first song, move one step back
+    if current_index > 0:
+        prev_video = video_list[current_index - 1]
+        current_video_id = prev_video["video_id"]
+        player_state = "playing"
+        emit(
+            "play_video",
+            {"video_id": current_video_id, "title": prev_video["title"]},
+            broadcast=True,
+        )
+    # Otherwise, do nothing if current_index <= 0
+
 def play_next_video():
     global current_video_id, player_state
     current_index = next(
-        (
-            index
-            for index, video in enumerate(video_list)
-            if video["video_id"] == current_video_id
-        ),
+        (index for index, v in enumerate(video_list) if v["video_id"] == current_video_id),
         -1,
     )
+    # If we're not at the last song, move one step forward
     if current_index != -1 and current_index < len(video_list) - 1:
         next_video = video_list[current_index + 1]
         current_video_id = next_video["video_id"]
@@ -437,6 +458,8 @@ def play_next_video():
             {"video_id": current_video_id, "title": next_video["title"]},
             broadcast=True,
         )
+    # Otherwise, do nothing if at the last song or no current
+
 
 @socketio.on("seek_video")
 def handle_seek_video(data):

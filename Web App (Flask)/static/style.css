@@ -50,7 +50,7 @@ body.dark-mode .video-meta {
   color: #b0b0b0;
 }
 
-body.dark-mode .controls-card,
+body.dark-mode .controls-card, body.dark-mode .playback-controls-card,
 .dark-mode-toggle {
   background-color: #555;
   /* Changed background color for dark mode toggle */
@@ -177,25 +177,25 @@ body.dark-mode .video-artist {
   margin: 2px 0;
 }
 
-.controls-card,
+.controls-card, .playback-controls-card,
 .video-form-card,
 .playlist {
   margin-bottom: 10px;
 }
 
-.controls-card,
+.controls-card, .playback-controls-card,
 .video-form-card {
   padding: 10px;
   border-radius: 15px;
   background-color: #fff;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
   display: flex;
-  justify-content: space-between;
+  justify-content: space-between; /* Puts the playback control buttons in the left. To put them in center, use center */
   align-items: center;
   transition: background-color 0.3s, color 0.3s;
 }
 
-.dark-mode .controls-card,
+.dark-mode .controls-card, .dark-mode .playback-controls-card,
 .dark-mode .video-form-card {
   background-color: #333;
   color: #ddd;
@@ -214,7 +214,7 @@ body.dark-mode .video-artist {
   gap: 10px;
 }
 
-.controls button,
+.controls button, .playback-controls button,
 .dark-mode-toggle,
 .suggestions-toggle {
   display: flex;
@@ -229,7 +229,7 @@ body.dark-mode .video-artist {
   transition: background-color 0.3s, box-shadow 0.3s;
 }
 
-.controls button i,
+.controls button i, .playback-controls button i,
 .dark-mode-toggle i,
 .suggestions-toggle i {
   width: 20px;
@@ -240,14 +240,14 @@ body.dark-mode .video-artist {
   color: #fff;
 }
 
-.dark-mode .controls button,
+.dark-mode .controls button, .dark-mode .playback-controls button,
 .dark-mode .dark-mode-toggle,
 .dark-mode .suggestions-toggle {
   background-color: #555;
   color: #fff;
 }
 
-.controls button,
+.controls button, .playback-controls button,
 .video-form button {
   background-color: #007bff;
   color: #fff;
@@ -259,21 +259,21 @@ body.dark-mode .video-artist {
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .controls button:hover,
+  .controls button:hover, .playback-controls button:hover,
   .video-form button:hover {
     background-color: #0056b3;
     color: #fff;
   }
 }
 
-.dark-mode .controls button,
+.dark-mode .controls button, .dark-mode .playback-controls button,
 .dark-mode .video-form button {
   background-color: #007bff;
   color: #fff;
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .dark-mode .controls button:hover,
+  .dark-mode .controls button:hover, .dark-mode .playback-controls button:hover,
   .dark-mode .video-form button:hover {
     background-color: #0056b3;
     color: #fff;
@@ -299,6 +299,7 @@ body.dark-mode .video-artist {
 }
 
 #volume-slider {
+  align-items: end;
   margin-left: 10px;
   width: 100px;
 }
@@ -520,7 +521,7 @@ body.dark-mode .video-meta {
   color: #b0b0b0;
 }
 
-body.dark-mode .controls-card,
+body.dark-mode .controls-card, body.dark-mode .playback-controls-card,
 .dark-mode-toggle {
   background-color: #555;
   color: #fff;
@@ -920,7 +921,7 @@ body.dark-mode #notification-overlay {
 @media (hover: none) and (pointer: coarse) {
   /* Simulate hover effects for mobile touchscreens */
   .header button:active,
-  .controls button:active,
+  .controls button:active, .playback-controls button:active,
   .video-item:active,
   .remove-btn:active {
     background-color: #f0f0f0;
@@ -934,7 +935,7 @@ body.dark-mode #notification-overlay {
 /* Ensure consistent size during touch/click */
 button,
 .header button,
-.controls button,
+.controls button, .playback-controls button,
 .remove-btn,
 .suggestions-toggle,
 .dark-mode-toggle,
@@ -947,7 +948,7 @@ button,
 
 button:active,
 .header button:active,
-.controls button:active,
+.controls button:active, .playback-controls button:active,
 .remove-btn:active,
 .suggestions-toggle:active,
 .dark-mode-toggle:active,
@@ -973,4 +974,72 @@ button:active,
     background-color: #0056b3;
     color: #fff;
   }
+}
+
+
+/* -------------------------------------
+   New Playback Controls Card
+-------------------------------------- */
+/* .playback-controls-card {
+  margin-bottom: 10px;
+  padding: 10px;
+  border-radius: 15px;
+  background-color: #fff;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: background-color 0.3s, color 0.3s;
+} */
+
+/* If in dark mode, we want the same style adjustments as other cards */
+/* .dark-mode .playback-controls-card {
+  background-color: #333;
+  color: #ddd;
+} */
+
+.playback-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Buttons inside .playback-controls can be styled like your existing controls */
+/* .playback-controls button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: background-color 0.3s, box-shadow 0.3s;
+} */
+
+/* .dark-mode .playback-controls button {
+  background-color: #555;
+  color: #fff;
+} */
+
+/* Example of optional hover style if you want it consistent with others */
+@media (hover: hover) and (pointer: fine) {
+  .playback-controls button:hover {
+    background-color: #0056b3;
+    color: #fff;
+  }
+}
+
+#loop-btn {
+  color: grey; /* Default state (loop off) */
+  transition: color 0.3s;
+}
+
+#loop-btn.loop-once {
+  color: blue;
+}
+
+#loop-btn.loop-indefinite {
+  color: blue;
 }
