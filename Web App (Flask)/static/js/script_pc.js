@@ -110,17 +110,21 @@ socket.on("play_next_video", (data) => {
   }
 
   // Sync frontend with the current playback state
-  socket.emit("sync_play_state", { video_id: currentVideoId, loopState: currentLoopState });
+  socket.emit("sync_play_state", {
+    video_id: currentVideoId,
+    loopState: currentLoopState,
+  });
 });
 
 function getNextVideoId(currentVideoId) {
-  const currentIndex = videoList.findIndex((video) => video.video_id === currentVideoId);
+  const currentIndex = videoList.findIndex(
+    (video) => video.video_id === currentVideoId
+  );
   if (currentIndex === -1 || currentIndex >= videoList.length - 1) {
     return null; // End of playlist
   }
   return videoList[currentIndex + 1].video_id;
 }
-
 
 function playNextOnce() {
   player.loop = false;
@@ -147,8 +151,6 @@ inputField.addEventListener("input", () => {
     actionButton.title = "Search Query";
   }
 });
-
-
 
 // Handle form submission
 document.getElementById("video-form").addEventListener("submit", function (e) {
@@ -266,7 +268,6 @@ function showSuggestions(suggestions) {
   }, 0);
 }
 
-
 function handleOutsideClick(event) {
   const contextMenu = document.getElementById("context-menu");
   const inputField = document.getElementById("youtube-link");
@@ -364,7 +365,9 @@ function showError(message) {
 socket.on("update_playlist", function (data) {
   console.log("Received data:", data);
 
-  const alreadyExists = videoList.some((video) => video.video_id === data.video_id);
+  const alreadyExists = videoList.some(
+    (video) => video.video_id === data.video_id
+  );
 
   if (alreadyExists) {
     // If it already exists, update its position in the list
@@ -373,7 +376,10 @@ socket.on("update_playlist", function (data) {
     updatePlaylist(videoList);
 
     // Notify if moved to the bottom
-    showNotification(`'${data.title}' is already in the playlist. It has been moved to the bottom.`, "info");
+    showNotification(
+      `'${data.title}' is already in the playlist. It has been moved to the bottom.`,
+      "info"
+    );
   } else {
     // Add the new video
     videoList.push(data);
@@ -381,9 +387,15 @@ socket.on("update_playlist", function (data) {
 
     // Check if this was an undo action
     if (data.isUndo) {
-      showNotification("Undo successful. Song added back to playlist.", "success");
+      showNotification(
+        "Undo successful. Song added back to playlist.",
+        "success"
+      );
     } else {
-      showNotification(`'${data.title}' has been successfully added to the playlist.`, "success");
+      showNotification(
+        `'${data.title}' has been successfully added to the playlist.`,
+        "success"
+      );
     }
   }
 });
@@ -398,11 +410,14 @@ socket.on("play_video", async function (data) {
   currentVideoId = data.video_id;
 
   // Find the song details based on the current video ID
-  const songDetails = videoList.find((video) => video.video_id === currentVideoId);
+  const songDetails = videoList.find(
+    (video) => video.video_id === currentVideoId
+  );
 
   // Construct the notification message
   const songTitle = songDetails?.title || "Unknown Title";
-  const artist = songDetails?.artist || songDetails?.creator || "Unknown Artist";
+  const artist =
+    songDetails?.artist || songDetails?.creator || "Unknown Artist";
   const notificationMessage = `Playing: ${songTitle} by ${artist}`;
 
   // Show the notification
@@ -411,7 +426,6 @@ socket.on("play_video", async function (data) {
   // Play the song
   await loadAndPlayVideo(currentVideoId);
 });
-
 
 socket.on("toggle_play_pause", (data) => {
   if (data.state === "playing") {
@@ -587,9 +601,7 @@ function addVideoToList(video) {
     <img class="drag-area" src="${video.thumbnail}" alt="${video.title}">
     <div class="video-info">
       <p class="video-title"><strong>${video.title}</strong></p>
-      <p class="video-artist">${
-        video.artist ? video.artist : video.creator
-      }</p>
+      <p class="video-artist">${video.artist ? video.artist : video.creator}</p>
       ${video.album ? `<p class="video-meta">Album: ${video.album}</p>` : ""}
     </div>
   `;
@@ -854,17 +866,17 @@ function formatDuration(seconds) {
 function showNotification(message, type = "info", undo = false, link = null) {
   let notification = document.getElementById("notification-overlay");
   if (!notification) {
-      notification = document.createElement("div");
-      notification.id = "notification-overlay";
-      document.body.appendChild(notification);
+    notification = document.createElement("div");
+    notification.id = "notification-overlay";
+    document.body.appendChild(notification);
   }
 
   // Style notification based on type
   const typeStyles = {
-      info: { backgroundColor: "#007bff", color: "#fff" },
-      success: { backgroundColor: "#28a745", color: "#fff" },
-      warning: { backgroundColor: "#ffc107", color: "#212529" },
-      error: { backgroundColor: "#dc3545", color: "#fff" },
+    info: { backgroundColor: "#007bff", color: "#fff" },
+    success: { backgroundColor: "#28a745", color: "#fff" },
+    warning: { backgroundColor: "#ffc107", color: "#212529" },
+    error: { backgroundColor: "#dc3545", color: "#fff" },
   };
   const styles = typeStyles[type] || typeStyles.info;
   notification.style.backgroundColor = styles.backgroundColor;
@@ -875,9 +887,9 @@ function showNotification(message, type = "info", undo = false, link = null) {
       <span style="font-size: 16px; margin-right: 10px;">${message}</span>
   `;
   if (undo && link) {
-      const undoButton = document.createElement("button");
-      undoButton.textContent = "Undo";
-      undoButton.style.cssText = `
+    const undoButton = document.createElement("button");
+    undoButton.textContent = "Undo";
+    undoButton.style.cssText = `
           font-size: 16px;
           font-weight: bold;
           color: #fff;
@@ -889,17 +901,20 @@ function showNotification(message, type = "info", undo = false, link = null) {
           transition: transform 0.2s, background-color 0.2s;
           margin-left: 10px;
       `;
-      undoButton.addEventListener("mouseover", () => {
-          undoButton.style.backgroundColor = "#d32f2f";
-      });
-      undoButton.addEventListener("mouseout", () => {
-          undoButton.style.backgroundColor = "#f44336";
-      });
-      undoButton.addEventListener("click", () => { 
-        socket.emit("new_video", { link: link, undo: true }); 
-        showNotification("Undo successful. Song added back to playlist.", "success"); 
-      });      
-      notification.appendChild(undoButton);
+    undoButton.addEventListener("mouseover", () => {
+      undoButton.style.backgroundColor = "#d32f2f";
+    });
+    undoButton.addEventListener("mouseout", () => {
+      undoButton.style.backgroundColor = "#f44336";
+    });
+    undoButton.addEventListener("click", () => {
+      socket.emit("new_video", { link: link, undo: true });
+      showNotification(
+        "Undo successful. Song added back to playlist.",
+        "success"
+      );
+    });
+    notification.appendChild(undoButton);
   }
 
   notification.className = "show";
@@ -913,7 +928,7 @@ function showNotification(message, type = "info", undo = false, link = null) {
   // Set timeout to hide the notification
   clearTimeout(currentNotificationTimeout);
   currentNotificationTimeout = setTimeout(() => {
-      notification.className = notification.className.replace("show", "");
+    notification.className = notification.className.replace("show", "");
   }, 2000); // Adjust the duration as needed
 }
 
@@ -952,9 +967,8 @@ function showVolumeOverlay(volume) {
   const rect = volumeSlider.getBoundingClientRect();
   const overlayRect = volumeOverlay.getBoundingClientRect();
 
-  volumeOverlay.style.left = `${
-    rect.left + rect.width / 2 - overlayRect.width / 2
-  }px`;
+  volumeOverlay.style.left = `${rect.left + rect.width / 2 - overlayRect.width / 2
+    }px`;
   volumeOverlay.style.top = `${rect.top - overlayRect.height - 10}px`;
 
   setTimeout(() => {
@@ -976,5 +990,3 @@ function updateContainerSize() {
 }
 updateContainerSize();
 window.addEventListener("resize", updateContainerSize);
-
-

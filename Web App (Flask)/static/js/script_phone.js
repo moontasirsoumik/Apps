@@ -112,17 +112,21 @@ socket.on("play_next_video", (data) => {
   }
 
   // Sync frontend with the current playback state
-  socket.emit("sync_play_state", { video_id: currentVideoId, loopState: currentLoopState });
+  socket.emit("sync_play_state", {
+    video_id: currentVideoId,
+    loopState: currentLoopState,
+  });
 });
 
 function getNextVideoId(currentVideoId) {
-  const currentIndex = videoList.findIndex((video) => video.video_id === currentVideoId);
+  const currentIndex = videoList.findIndex(
+    (video) => video.video_id === currentVideoId
+  );
   if (currentIndex === -1 || currentIndex >= videoList.length - 1) {
     return null; // End of playlist
   }
   return videoList[currentIndex + 1].video_id;
 }
-
 
 function playNextOnce() {
   player.loop = false;
@@ -249,7 +253,6 @@ function showSuggestions(suggestions) {
   }, 0);
 }
 
-
 // Handle suggestion selection
 function selectSuggestion(videoId, title) {
   inputField.value = ""; // Clear the input field
@@ -302,7 +305,9 @@ window.addEventListener("resize", positionSuggestions);
 socket.on("update_playlist", function (data) {
   console.log("Received data:", data);
 
-  const alreadyExists = videoList.some((video) => video.video_id === data.video_id);
+  const alreadyExists = videoList.some(
+    (video) => video.video_id === data.video_id
+  );
 
   if (alreadyExists) {
     // If it already exists, update its position in the list
@@ -311,7 +316,10 @@ socket.on("update_playlist", function (data) {
     updatePlaylist(videoList);
 
     // Notify if moved to the bottom
-    showNotification(`'${data.title}' is already in the playlist. It has been moved to the bottom.`, "info");
+    showNotification(
+      `'${data.title}' is already in the playlist. It has been moved to the bottom.`,
+      "info"
+    );
   } else {
     // Add the new video
     videoList.push(data);
@@ -319,9 +327,15 @@ socket.on("update_playlist", function (data) {
 
     // Check if this was an undo action
     if (data.isUndo) {
-      showNotification("Undo successful. Song added back to playlist.", "success");
+      showNotification(
+        "Undo successful. Song added back to playlist.",
+        "success"
+      );
     } else {
-      showNotification(`'${data.title}' has been successfully added to the playlist.`, "success");
+      showNotification(
+        `'${data.title}' has been successfully added to the playlist.`,
+        "success"
+      );
     }
   }
 });
@@ -340,11 +354,14 @@ socket.on("play_video", function (data) {
   currentVideoId = data.video_id;
 
   // Find the song details based on the current video ID
-  const songDetails = videoList.find((video) => video.video_id === currentVideoId);
+  const songDetails = videoList.find(
+    (video) => video.video_id === currentVideoId
+  );
 
   // Construct the notification message
   const songTitle = songDetails?.title || "Unknown Title";
-  const artist = songDetails?.artist || songDetails?.creator || "Unknown Artist";
+  const artist =
+    songDetails?.artist || songDetails?.creator || "Unknown Artist";
   const notificationMessage = `Playing: ${songTitle} by ${artist}`;
 
   // Highlight the current video
@@ -359,7 +376,6 @@ socket.on("play_video", function (data) {
   // Show the notification
   showNotification(notificationMessage, "info");
 });
-
 
 /**
  * The server toggled global play/pause.
@@ -495,9 +511,7 @@ function addVideoToList(video) {
     <img class="drag-area" src="${video.thumbnail}" alt="${video.title}">
     <div class="video-info">
       <p class="video-title"><strong>${video.title}</strong></p>
-      <p class="video-artist">${
-        video.artist ? video.artist : video.creator
-      }</p>
+      <p class="video-artist">${video.artist ? video.artist : video.creator}</p>
       ${video.album ? `<p class="video-meta">Album: ${video.album}</p>` : ""}
     </div>
   `;
@@ -505,7 +519,7 @@ function addVideoToList(video) {
   attachClickListener(videoItem);
   attachSwipeListener(videoItem);
   attachLongPressListener(videoItem);
-  updateContainerSize();  
+  updateContainerSize();
 }
 
 function updatePlaylist(videos) {
@@ -530,70 +544,69 @@ function attachClickListener(videoItem) {
 
 function attachSwipeListener(videoItem) {
   videoItem.addEventListener("touchstart", function (e) {
-      if (videoItem.classList.contains("playing")) {
-          isSwiping = false;
-          return;
-      }
-      isSwiping = true;
-      swipeStartX = e.touches[0].clientX;
-      swipeStartY = e.touches[0].clientY;
-      videoItem.style.transition = "none";
+    if (videoItem.classList.contains("playing")) {
+      isSwiping = false;
+      return;
+    }
+    isSwiping = true;
+    swipeStartX = e.touches[0].clientX;
+    swipeStartY = e.touches[0].clientY;
+    videoItem.style.transition = "none";
   });
 
   videoItem.addEventListener("touchmove", function (e) {
-      if (!isSwiping) return;
-      const swipeEndX = e.touches[0].clientX;
-      const swipeEndY = e.touches[0].clientY;
-      const deltaX = swipeEndX - swipeStartX;
-      const deltaY = swipeEndY - swipeStartY;
+    if (!isSwiping) return;
+    const swipeEndX = e.touches[0].clientX;
+    const swipeEndY = e.touches[0].clientY;
+    const deltaX = swipeEndX - swipeStartX;
+    const deltaY = swipeEndY - swipeStartY;
 
-      if (
-          Math.abs(deltaX) > Math.abs(deltaY) &&
-          Math.abs(deltaX) > swipeThreshold
-      ) {
-          e.preventDefault();
-          videoItem.style.transform = `translateX(${deltaX}px)`;
-      }
+    if (
+      Math.abs(deltaX) > Math.abs(deltaY) &&
+      Math.abs(deltaX) > swipeThreshold
+    ) {
+      e.preventDefault();
+      videoItem.style.transform = `translateX(${deltaX}px)`;
+    }
   });
 
   videoItem.addEventListener("touchend", function (e) {
-      if (!isSwiping) return;
-      const swipeEndX = e.changedTouches[0].clientX;
-      const deltaX = swipeEndX - swipeStartX;
-      isSwiping = false;
-      if (Math.abs(deltaX) > swipeThreshold) {
-          if (deltaX < 0) {
-              // Save the deleted song's link
-              lastDeletedSongLink = videoItem.getAttribute("data-url");
+    if (!isSwiping) return;
+    const swipeEndX = e.changedTouches[0].clientX;
+    const deltaX = swipeEndX - swipeStartX;
+    isSwiping = false;
+    if (Math.abs(deltaX) > swipeThreshold) {
+      if (deltaX < 0) {
+        // Save the deleted song's link
+        lastDeletedSongLink = videoItem.getAttribute("data-url");
 
-              // Swipe left => remove
-              videoItem.style.transition =
-                  "transform 0.3s ease-out, background-color 0.3s ease-out";
-              videoItem.style.transform = "translateX(-100%)";
-              videoItem.style.backgroundColor = "red";
-              setTimeout(() => {
-                  socket.emit("remove_video", {
-                      id: parseInt(videoItem.getAttribute("data-id")),
-                  });
-                  videoItem.remove();
-                  showNotification("Song removed.", "info", true); // Show undo option
-              }, 300);
-          } else {
-              videoItem.style.transition = "transform 0.3s ease-out";
-              videoItem.style.transform = "translateX(0)";
-          }
+        // Swipe left => remove
+        videoItem.style.transition =
+          "transform 0.3s ease-out, background-color 0.3s ease-out";
+        videoItem.style.transform = "translateX(-100%)";
+        videoItem.style.backgroundColor = "red";
+        setTimeout(() => {
+          socket.emit("remove_video", {
+            id: parseInt(videoItem.getAttribute("data-id")),
+          });
+          videoItem.remove();
+          showNotification("Song removed.", "info", true); // Show undo option
+        }, 300);
       } else {
-          videoItem.style.transition = "transform 0.3s ease-out";
-          videoItem.style.transform = "translateX(0)";
+        videoItem.style.transition = "transform 0.3s ease-out";
+        videoItem.style.transform = "translateX(0)";
       }
+    } else {
+      videoItem.style.transition = "transform 0.3s ease-out";
+      videoItem.style.transform = "translateX(0)";
+    }
   });
 
   videoItem.addEventListener("touchcancel", function () {
-      isSwiping = false;
-      videoItem.style.transform = "translateX(0)";
+    isSwiping = false;
+    videoItem.style.transform = "translateX(0)";
   });
 }
-
 
 // Fetch the playlist from the backend on page load
 window.addEventListener("load", () => {
@@ -626,7 +639,10 @@ function attachSwipeListener(videoItem) {
     const deltaX = swipeEndX - swipeStartX;
     const deltaY = swipeEndY - swipeStartY;
 
-    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > swipeThreshold) {
+    if (
+      Math.abs(deltaX) > Math.abs(deltaY) &&
+      Math.abs(deltaX) > swipeThreshold
+    ) {
       e.preventDefault();
       videoItem.style.transform = `translateX(${deltaX}px)`;
     }
@@ -640,7 +656,8 @@ function attachSwipeListener(videoItem) {
     if (Math.abs(deltaX) > swipeThreshold) {
       if (deltaX < 0) {
         // Swipe left => remove video
-        videoItem.style.transition = "transform 0.3s ease-out, background-color 0.3s ease-out";
+        videoItem.style.transition =
+          "transform 0.3s ease-out, background-color 0.3s ease-out";
         videoItem.style.transform = "translateX(-100%)";
         videoItem.style.backgroundColor = "red";
         setTimeout(() => {
@@ -663,7 +680,6 @@ function attachSwipeListener(videoItem) {
     videoItem.style.transform = "translateX(0)";
   });
 }
-
 
 const sortable = new Sortable(document.getElementById("playlist"), {
   animation: 150,
@@ -833,10 +849,13 @@ function showNotification(message, type = "info", undo = false, link = null) {
     undoButton.addEventListener("mouseout", () => {
       undoButton.style.backgroundColor = "#f44336";
     });
-    undoButton.addEventListener("click", () => { 
-      socket.emit("new_video", { link: link, undo: true }); 
-      showNotification("Undo successful. Song added back to playlist.", "success"); 
-    });    
+    undoButton.addEventListener("click", () => {
+      socket.emit("new_video", { link: link, undo: true });
+      showNotification(
+        "Undo successful. Song added back to playlist.",
+        "success"
+      );
+    });
     notification.appendChild(undoButton);
   }
 
@@ -877,13 +896,11 @@ function hideNotification() {
   document.removeEventListener("touchstart", handleOutsideTouch);
 }
 
-
 // Listen for notification events emitted from the server
 socket.on("notification", function (data) {
   const { message, type = "info", undo = false, video_id, link } = data;
   showNotification(message, type, undo, link);
 });
-
 
 function getNotificationMessage(link) {
   if (!link) {
@@ -992,7 +1009,9 @@ function showContextMenu(videoItem, x, y) {
 }
 
 function playNext(videoId) {
-  const currentIndex = videoList.findIndex((video) => video.video_id === currentVideoId);
+  const currentIndex = videoList.findIndex(
+    (video) => video.video_id === currentVideoId
+  );
   const nextIndex = currentIndex + 1;
 
   const videoIndex = videoList.findIndex((video) => video.video_id === videoId);
@@ -1002,7 +1021,8 @@ function playNext(videoId) {
     const [video] = videoList.splice(videoIndex, 1);
 
     // If the video is before the current song, decrement the next index to account for the removal
-    const adjustedNextIndex = videoIndex < nextIndex ? nextIndex - 1 : nextIndex;
+    const adjustedNextIndex =
+      videoIndex < nextIndex ? nextIndex - 1 : nextIndex;
 
     // Insert the video into the correct position
     videoList.splice(adjustedNextIndex, 0, video);
@@ -1020,8 +1040,6 @@ function playNext(videoId) {
 
   hideContextMenu();
 }
-
-
 
 function handleOutsideClick(event) {
   const contextMenu = document.getElementById("context-menu");
