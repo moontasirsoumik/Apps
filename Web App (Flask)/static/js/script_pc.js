@@ -60,18 +60,21 @@ document.getElementById("loop-btn").addEventListener("click", () => {
       loopBtn.title = "Loop Off";
       icon.className = "fas fa-repeat";
       player.loop = false;
+      showNotification(`Loop off`, "info");
       break;
     case 1: // Loop Once
       loopBtn.className = "loop-once";
       loopBtn.title = "Loop Once";
       icon.className = "fas fa-arrow-right";
       player.loop = false;
+      showNotification(`Loop Once`, "info");
       break;
     case 2: // Loop Indefinitely
       loopBtn.className = "loop-indefinite";
       loopBtn.title = "Loop Indefinitely";
       icon.className = "fas fa-infinity";
       player.loop = true;
+      showNotification(`Loop Indefinitely`, "info");
       break;
   }
 

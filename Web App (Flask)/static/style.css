@@ -50,13 +50,6 @@ body.dark-mode .video-meta {
   color: #b0b0b0;
 }
 
-body.dark-mode .controls-card, body.dark-mode .playback-controls-card,
-.dark-mode-toggle {
-  background-color: #555;
-  /* Changed background color for dark mode toggle */
-  color: #fff;
-}
-
 .dark-mode {
   background-color: #121212;
   color: #ddd;
@@ -190,7 +183,7 @@ body.dark-mode .video-artist {
   background-color: #fff;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
   display: flex;
-  justify-content: space-between; /* Puts the playback control buttons in the left. To put them in center, use center */
+  justify-content: flex-start; /* Puts the playback control buttons in the left. To put them in center, use center */
   align-items: center;
   transition: background-color 0.3s, color 0.3s;
 }
@@ -201,14 +194,15 @@ body.dark-mode .video-artist {
   color: #ddd;
 }
 
-.controls {
+.controls, .playback-controls {
   display: flex;
   width: 100%;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
 }
 
-.controls .buttons {
+.controls .buttons, .playback-controls .buttons {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -292,10 +286,9 @@ body.dark-mode .video-artist {
 }
 
 .volume-control {
-  display: flex;
+  display: flex;        /* keep if you want the slider + icon inline */
   align-items: center;
-  justify-content: flex-end;
-  width: 100%;
+  margin-left: auto;    /* THIS pushes the volume slider to the far right */
 }
 
 #volume-slider {
@@ -974,72 +967,9 @@ button:active,
     background-color: #0056b3;
     color: #fff;
   }
-}
-
-
-/* -------------------------------------
-   New Playback Controls Card
--------------------------------------- */
-/* .playback-controls-card {
-  margin-bottom: 10px;
-  padding: 10px;
-  border-radius: 15px;
-  background-color: #fff;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  transition: background-color 0.3s, color 0.3s;
-} */
-
-/* If in dark mode, we want the same style adjustments as other cards */
-/* .dark-mode .playback-controls-card {
-  background-color: #333;
-  color: #ddd;
-} */
-
-.playback-controls {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-/* Buttons inside .playback-controls can be styled like your existing controls */
-/* .playback-controls button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #007bff;
-  color: #fff;
-  border: none;
-  padding: 8px 20px;
-  border-radius: 25px;
-  cursor: pointer;
-  transition: background-color 0.3s, box-shadow 0.3s;
-} */
-
-/* .dark-mode .playback-controls button {
-  background-color: #555;
-  color: #fff;
-} */
-
-/* Example of optional hover style if you want it consistent with others */
-@media (hover: hover) and (pointer: fine) {
   .playback-controls button:hover {
     background-color: #0056b3;
     color: #fff;
   }
 }
 
-#loop-btn {
-  color: grey; /* Default state (loop off) */
-  transition: color 0.3s;
-}
-
-#loop-btn.loop-once {
-  color: blue;
-}
-
-#loop-btn.loop-indefinite {
-  color: blue;
-}

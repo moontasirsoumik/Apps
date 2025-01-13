@@ -399,9 +399,26 @@ def handle_play_video(data):
 
 @socketio.on("play_pause")
 def handle_play_pause():
-    global player_state
-    player_state = "paused" if player_state == "playing" else "playing"
-    emit("toggle_play_pause", {"state": player_state}, broadcast=True)
+    global player_state, current_video_id
+
+    if current_video_id is None:  # No song is currently playing
+        if video_list:  # Check if there are videos in the playlist
+            current_video = video_list[0]  # Select the first song
+            current_video_id = current_video["video_id"]
+            player_state = "playing"  # Set state to playing
+            emit(
+                "play_video",
+                {"video_id": current_video_id, "title": current_video["title"]},
+                broadcast=True,
+            )
+        else:
+            # No songs in the playlist; send notification or ignore
+            emit("notification", {"message": "No songs in the playlist to play."})
+    else:
+        # Toggle play/pause state for the currently playing song
+        player_state = "paused" if player_state == "playing" else "playing"
+        emit("toggle_play_pause", {"state": player_state}, broadcast=True)
+
 
 @socketio.on("change_volume")
 def handle_change_volume(data):
