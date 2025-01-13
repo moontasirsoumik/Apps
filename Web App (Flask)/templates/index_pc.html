@@ -41,19 +41,27 @@
       <!-- NEW Playback Controls Card -->
       <div class="playback-controls-card">
         <div class="playback-controls">
-          <button id="prev-btn"><i class="fas fa-step-backward"></i></button>
-          <!-- Move your existing play/pause logic to this button -->
-          <button id="play-pause-btn"><i class="fas fa-play"></i></button>
-          <button id="next-btn"><i class="fas fa-step-forward"></i></button>
-          <div class="volume-control">
-            <input
-              type="range"
-              id="volume-slider"
-              min="0"
-              max="100"
-              value="10"
-            />
+          <div class="primary-controls">
+            <button id="prev-btn"><i class="fas fa-step-backward"></i></button>
+            <button id="play-pause-btn"><i class="fas fa-play"></i></button>
+            <button id="next-btn"><i class="fas fa-step-forward"></i></button>
+            <div class="volume-control">
+              <input
+                type="range"
+                id="volume-slider"
+                min="0"
+                max="100"
+                value="10"
+              />
+            </div>
           </div>
+          <button
+            id="toggle-controls-btn"
+            class="toggle-controls-btn"
+            title="Show/Hide Extra Controls"
+          >
+            <i class="fas fa-chevron-up"></i>
+          </button>
         </div>
       </div>
 

@@ -990,3 +990,24 @@ function updateContainerSize() {
 }
 updateContainerSize();
 window.addEventListener("resize", updateContainerSize);
+
+document.addEventListener('DOMContentLoaded', function () {
+  const toggleControlsBtn = document.getElementById('toggle-controls-btn');
+  const controlsCard = document.querySelector('.controls-card');
+
+  // If you want it collapsed by default, ensure that .controls-card doesn’t have .expanded in the HTML.
+  controlsCard.classList.remove('expanded');
+
+  toggleControlsBtn.addEventListener('click', () => {
+    controlsCard.classList.toggle('expanded');
+
+    const icon = toggleControlsBtn.querySelector('i');
+    if (controlsCard.classList.contains('expanded')) {
+      icon.classList.remove('fa-chevron-up');
+      icon.classList.add('fa-chevron-down');
+    } else {
+      icon.classList.remove('fa-chevron-down');
+      icon.classList.add('fa-chevron-up');
+    }
+  });
+});
