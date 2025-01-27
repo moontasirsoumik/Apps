@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import (
     QGraphicsDropShadowEffect,
     QSizePolicy,
 )
-from PyQt5.QtCore import Qt, QSize, QRectF, QTimer, QPropertyAnimation, QEasingCurve
+from PyQt5.QtCore import Qt, QSize, QRectF, QTimer, QPropertyAnimation, QEasingCurve, QEvent
 from PyQt5.QtGui import (
     QFont,
     QPainter,
@@ -27,6 +27,10 @@ from PyQt5.QtGui import (
     QRadialGradient,
 )
 from PyQt5.QtWidgets import QProxyStyle, QStyle, QStyleOptionSlider
+
+from PyQt5.QtWidgets import QSystemTrayIcon, QMenu
+from PyQt5.QtGui import QCursor
+
 
 
 class HollowHandleStyle(QProxyStyle):
@@ -183,6 +187,47 @@ class BrightnessControlApp(QMainWindow):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_brightness_values)
         self.timer.start(1000)
+        
+        # --- System Tray Setup ---
+        self.tray_menu_visible = False
+        
+        self.tray_icon = QSystemTrayIcon(QIcon("icon.png"), self)
+        self.tray_icon.setToolTip("Brightness Control")
+        
+        tray_menu = QMenu()
+        tray_menu.aboutToShow.connect(lambda: setattr(self, 'tray_menu_visible', True))
+        tray_menu.aboutToHide.connect(lambda: setattr(self, 'tray_menu_visible', False))
+        exit_action = tray_menu.addAction("Exit")
+        exit_action.triggered.connect(self.close)
+        
+        self.tray_icon.setContextMenu(tray_menu)
+        self.tray_icon.activated.connect(self.on_tray_icon_activated)
+        self.tray_icon.show()
+
+        # Hide main window initially so it only appears from the tray
+        self.hide()
+        
+        QApplication.instance().installEventFilter(self)
+
+    def on_tray_icon_activated(self, reason):
+        """Toggle the main window when the tray icon is clicked."""
+        if reason == QSystemTrayIcon.Trigger:  # Left-click
+            if self.isHidden():
+                self.show_window_in_tray_area()
+            else:
+                self.hide()
+
+    def show_window_in_tray_area(self):
+        """Position and show the window near the system tray area."""
+        screen = QApplication.screenAt(QCursor.pos())
+        if screen:
+            screen_geo = screen.availableGeometry()
+            x = screen_geo.right() - self.width() - 20
+            y = screen_geo.bottom() - self.height() - 50
+            self.move(x, y)
+        self.show()
+        self.raise_()
+        self.activateWindow()
 
     # --------------------------
     # OS/Theme/Accent utilities
@@ -254,10 +299,10 @@ class BrightnessControlApp(QMainWindow):
         header_layout.setSpacing(10)
 
         self.title_label = QLabel("Brightness")
-        self.title_label.setFont(QFont("Segoe UI Semibold", 16, QFont.Bold))
+        self.title_label.setFont(QFont("Segoe UI Variable", 16, QFont.Bold))
 
         self.refresh_button = QPushButton("⟳ Refresh")
-        self.refresh_button.setFont(QFont("Segoe UI", 10))
+        self.refresh_button.setFont(QFont("Segoe UI Variable", 10))
         self.refresh_button.setIcon(QIcon.fromTheme("view-refresh"))
         self.refresh_button.setIconSize(QSize(16, 16))
         self.refresh_button.setCursor(Qt.PointingHandCursor)
@@ -395,7 +440,7 @@ class BrightnessControlApp(QMainWindow):
 
         # Display label
         display_label = QLabel(display)
-        display_label.setFont(QFont("Segoe UI Semibold", 10))
+        display_label.setFont(QFont("Segoe UI Variable", 10))
         display_label.setContentsMargins(2, 0, 0, 0)
 
         # Slider row
@@ -411,7 +456,7 @@ class BrightnessControlApp(QMainWindow):
         )
 
         value_label = QLabel(f"{self.get_brightness(display)}%")
-        value_label.setFont(QFont("Segoe UI", 9))
+        value_label.setFont(QFont("Segoe UI Variable", 9))
         value_label.setFixedWidth(35)
         value_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
@@ -537,25 +582,25 @@ class BrightnessControlApp(QMainWindow):
         self.move(self.x() + delta.x(), self.y() + delta.y())
         self.old_pos = event.globalPos()
 
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.WindowDeactivate:
+            if self.isVisible() and not self.tray_menu_visible:
+                self.hide()
+                return True
+        return super().eventFilter(obj, event)
+
+    def focusOutEvent(self, event):
+        if self.isVisible() and not self.tray_menu_visible:
+            print("Hiding window due to focus loss.")  # Debug log
+            self.hide()
+        super().focusOutEvent(event)
 
 # -------------------------
 # Main Execution
 # -------------------------
-if __name__ == "__main__":
-    # import logging
-    # logging.basicConfig(level=logging.DEBUG)
-    # logging.debug("App starting...")
 
-    # try:
-    #     app = QApplication(sys.argv)
-    #     window = BrightnessControlApp()
-    #     window.show()
-    #     logging.debug("Window shown...")
-    #     sys.exit(app.exec_())
-    # except Exception as e:
-    #     logging.error(f"Fatal error: {e}")
+if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = BrightnessControlApp()
-    window.show()
-    # logging.debug("Window shown...")
     sys.exit(app.exec_())
+
