@@ -2,13 +2,32 @@ import sys
 import ctypes
 import screen_brightness_control as sbc
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QVBoxLayout, QLabel, QSlider, QWidget, QFrame, 
-    QHBoxLayout, QPushButton, QGraphicsDropShadowEffect, QSizePolicy
+    QApplication,
+    QMainWindow,
+    QVBoxLayout,
+    QLabel,
+    QSlider,
+    QWidget,
+    QFrame,
+    QHBoxLayout,
+    QPushButton,
+    QGraphicsDropShadowEffect,
+    QSizePolicy,
 )
 from PyQt5.QtCore import Qt, QSize, QRectF, QTimer, QPropertyAnimation, QEasingCurve
-from PyQt5.QtGui import (QFont, QPainter, QColor, QPainterPath, QLinearGradient, 
-                        QPainterPath, QIcon, QBrush, QPalette, QRadialGradient)
+from PyQt5.QtGui import (
+    QFont,
+    QPainter,
+    QColor,
+    QPainterPath,
+    QLinearGradient,
+    QIcon,
+    QBrush,
+    QPalette,
+    QRadialGradient,
+)
 from PyQt5.QtWidgets import QProxyStyle, QStyle, QStyleOptionSlider
+
 
 class HollowHandleStyle(QProxyStyle):
     def __init__(self, accent_color: QColor, config: dict = None):
@@ -21,15 +40,23 @@ class HollowHandleStyle(QProxyStyle):
             "handle.ring-width": 3,
             "handle.hollow-radius": 5,
             "handle.margin": 3,
-            "groove.radius": 2
+            "groove.radius": 2,
         }
         if config:
             self.config.update(config)
-        w = self.config["handle.margin"] + self.config["handle.ring-width"] + self.config["handle.hollow-radius"]
+        w = (
+            self.config["handle.margin"]
+            + self.config["handle.ring-width"]
+            + self.config["handle.hollow-radius"]
+        )
         self.config["handle.size"] = QSize(2 * w, 2 * w)
 
     def subControlRect(self, cc, opt, sc, widget):
-        if cc != self.CC_Slider or opt.orientation != Qt.Horizontal or sc == self.SC_SliderTickmarks:
+        if (
+            cc != self.CC_Slider
+            or opt.orientation != Qt.Horizontal
+            or sc == self.SC_SliderTickmarks
+        ):
             return super().subControlRect(cc, opt, sc, widget)
 
         rect = opt.rect
@@ -41,7 +68,9 @@ class HollowHandleStyle(QProxyStyle):
 
         if sc == self.SC_SliderHandle:
             size = self.config["handle.size"]
-            x = self.sliderPositionFromValue(opt.minimum, opt.maximum, opt.sliderPosition, rect.width())
+            x = self.sliderPositionFromValue(
+                opt.minimum, opt.maximum, opt.sliderPosition, rect.width()
+            )
             x *= (rect.width() - size.width()) / rect.width()
             y = (rect.height() - size.height()) // 2
             sliderRect = QRectF(x, y, size.width(), size.height())
@@ -60,19 +89,31 @@ class HollowHandleStyle(QProxyStyle):
         painter.save()
         painter.translate(grooveRect.topLeft())
         groove_path = QPainterPath()
-        groove_path.addRoundedRect(0, 0, grooveRect.width(), self.config["groove.height"], 
-                                 self.config["groove.radius"], self.config["groove.radius"])
-        
+        groove_path.addRoundedRect(
+            0,
+            0,
+            grooveRect.width(),
+            self.config["groove.height"],
+            self.config["groove.radius"],
+            self.config["groove.radius"],
+        )
+
         # Groove background
         painter.setBrush(self.config["add-page.color"])
         painter.drawPath(groove_path)
-        
+
         # Filled groove
-        filled_width = handleRect.x() - grooveRect.x() + handleRect.width()/2
+        filled_width = handleRect.x() - grooveRect.x() + handleRect.width() / 2
         filled_groove = QPainterPath()
-        filled_groove.addRoundedRect(0, 0, filled_width, self.config["groove.height"], 
-                                   self.config["groove.radius"], self.config["groove.radius"])
-        
+        filled_groove.addRoundedRect(
+            0,
+            0,
+            filled_width,
+            self.config["groove.height"],
+            self.config["groove.radius"],
+            self.config["groove.radius"],
+        )
+
         # Gradient fill
         gradient = QLinearGradient(0, 0, filled_width, 0)
         gradient.setColorAt(0, self.config["sub-page.color"].lighter(120))
@@ -92,25 +133,29 @@ class HollowHandleStyle(QProxyStyle):
         path.addEllipse(center, hollowRadius, hollowRadius)
 
         handleColor = self.config["handle.color"]
-        handleColor.setAlpha(255 if opt.activeSubControls != self.SC_SliderHandle else 200)
-        
+        handleColor.setAlpha(
+            255 if opt.activeSubControls != self.SC_SliderHandle else 200
+        )
+
         # Handle shadow
         painter.setPen(Qt.NoPen)
         shadow = QRadialGradient(center, radius, center)
         shadow.setColorAt(0, handleColor.lighter(150))
         shadow.setColorAt(1, handleColor)
         painter.setBrush(QBrush(shadow))
-        painter.drawEllipse(center, radius+1, radius+1)
+        painter.drawEllipse(center, radius + 1, radius + 1)
 
         # Handle main
         painter.setBrush(handleColor)
         painter.drawPath(path)
+
 
 class StyledSlider(QSlider):
     def __init__(self, orientation, accent_color, parent=None):
         super().__init__(orientation, parent)
         self.setStyle(HollowHandleStyle(accent_color))
         self.setCursor(Qt.PointingHandCursor)
+
 
 class BrightnessControlApp(QMainWindow):
     def __init__(self):
@@ -124,44 +169,76 @@ class BrightnessControlApp(QMainWindow):
         self.setMinimumSize(350, 200)
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowSystemMenuHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
-        
+
         self.displays = []
-        self.init_ui()
-        self.setup_animations()
-        self.refresh_displays()
-        self.update_stylesheet()
-        
+        self.old_displays = []
         self.is_refreshing = False
 
-        # Add system theme checker
-        self.theme_check_timer = QTimer(self)
-        self.theme_check_timer.timeout.connect(self.check_system_theme)
-        self.theme_check_timer.start(1000)
+        self.init_ui()
+        self.setup_animations()
+        self.refresh_displays()  # Initial load
+        self.update_stylesheet()
 
+        # Keep timer for brightness sync only (once every 1s)
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_brightness_values)
         self.timer.start(1000)
-        
-    def check_system_theme(self):
-        new_dark_mode = self.get_dark_mode_status()
-        new_transparency = self.get_transparency_status()
-        
-        if new_dark_mode != self.is_dark_mode or new_transparency != self.transparency_enabled:
-            self.is_dark_mode = new_dark_mode
-            self.transparency_enabled = new_transparency
-            self.update_stylesheet()
-            self.refresh_displays()
 
+    # --------------------------
+    # OS/Theme/Accent utilities
+    # --------------------------
     def get_transparency_status(self):
+        """Check if Windows transparency effects are enabled."""
         try:
             import winreg
-            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, 
-                               r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize")
+
+            key = winreg.OpenKey(
+                winreg.HKEY_CURRENT_USER,
+                r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
+            )
             value, _ = winreg.QueryValueEx(key, "EnableTransparency")
             return value == 1
         except Exception:
             return True
 
+    def get_dark_mode_status(self):
+        """Check if Windows apps are in dark mode or not."""
+        try:
+            import winreg
+
+            key = winreg.OpenKey(
+                winreg.HKEY_CURRENT_USER,
+                r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
+            )
+            value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")
+            return value == 0
+        except Exception as e:
+            print(f"Error accessing dark mode status: {e}")
+            return False
+
+    def get_accent_color(self):
+        try:
+            import winreg
+
+            key = winreg.OpenKey(
+                winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\DWM"
+            )
+            value, _ = winreg.QueryValueEx(key, "AccentColor")
+
+            # Windows typically stores this as 0xAABBGGRR.
+            # Extract R, G, B in the correct order:
+            r = value & 0xFF
+            g = (value >> 8) & 0xFF
+            b = (value >> 16) & 0xFF
+
+            return QColor(r, g, b)
+        except Exception:
+            # Fallback if registry call fails
+            return QColor(0, 120, 215)
+
+    # ---------------------
+    # UI Setup
+    # ---------------------
     def init_ui(self):
         self.main_widget = QWidget()
         self.main_widget.setObjectName("MainWidget")
@@ -175,10 +252,10 @@ class BrightnessControlApp(QMainWindow):
         header_layout = QHBoxLayout()
         header_layout.setContentsMargins(0, 0, 0, 0)
         header_layout.setSpacing(10)
-        
+
         self.title_label = QLabel("Brightness")
         self.title_label.setFont(QFont("Segoe UI Semibold", 16, QFont.Bold))
-        
+
         self.refresh_button = QPushButton("⟳ Refresh")
         self.refresh_button.setFont(QFont("Segoe UI", 10))
         self.refresh_button.setIcon(QIcon.fromTheme("view-refresh"))
@@ -194,9 +271,9 @@ class BrightnessControlApp(QMainWindow):
         # Sliders container
         self.sliders_container = QWidget()
         self.sliders_layout = QVBoxLayout(self.sliders_container)
-        self.sliders_layout.setContentsMargins(0, 3, 0, 3)  # Tighter vertical margins
+        self.sliders_layout.setContentsMargins(0, 3, 0, 3)
         self.sliders_layout.setSpacing(6)
-        
+
         layout.addWidget(self.sliders_container)
 
         # Shadow effect
@@ -207,128 +284,157 @@ class BrightnessControlApp(QMainWindow):
         self.main_widget.setGraphicsEffect(shadow)
 
     def setup_animations(self):
+        # Fade-in animation
         self.opacity_anim = QPropertyAnimation(self.main_widget, b"windowOpacity")
         self.opacity_anim.setDuration(300)
         self.opacity_anim.setStartValue(0)
         self.opacity_anim.setEndValue(1)
         self.opacity_anim.start()
 
-        # self.refresh_anim = QPropertyAnimation(self.refresh_button, b"rotation")
-        # self.refresh_anim.setDuration(500)
-        # self.refresh_anim.setEasingCurve(QEasingCurve.OutBack)
-        # self.refresh_anim.finished.connect(lambda: self.refresh_button.setRotation(0))
-
+    # ---------------------
+    # Refresh logic
+    # ---------------------
     def refresh_displays(self):
-        # Prevent multiple refreshes
-        if hasattr(self, 'is_refreshing') and self.is_refreshing:
+        """Refresh button handler.
+        1) Checks system theme/blur/accent changes
+        2) Checks added/removed monitors
+        3) Updates the UI accordingly.
+        """
+        if self.is_refreshing:
             return
-        
-        
+
+        update_geometry = False
+        self.is_refreshing = True
         self.refresh_button.setText("⟳ Refreshing...")
         QTimer.singleShot(500, lambda: self.refresh_button.setText("⟳ Refresh"))
-                    
-        # self.is_refreshing = True
-        # self.refresh_anim.stop()
-        # self.refresh_anim.setStartValue(0)
-        # self.refresh_anim.setEndValue(360)
-        # self.refresh_anim.start()
+
+        # Restore the button text after a short delay
+        QTimer.singleShot(500, lambda: self.refresh_button.setText("⟳ Refresh"))
 
         try:
-            # Store current dimensions
-            current_width = self.width()
-            current_height = self.height()
-            
-            # Clear old sliders safely
+            # 1. Check theme changes
+            new_dark_mode = self.get_dark_mode_status()
+            new_transparency = self.get_transparency_status()
+            new_accent_color = self.get_accent_color()
+
+            if (
+                new_dark_mode != self.is_dark_mode
+                or new_transparency != self.transparency_enabled
+                or new_accent_color != self.accent_color
+            ):
+                self.is_dark_mode = new_dark_mode
+                self.transparency_enabled = new_transparency
+                self.accent_color = new_accent_color
+                self.update_stylesheet()
+
+                update_geometry = True
+
+            # 2. Clear old sliders
             while self.sliders_layout.count():
                 item = self.sliders_layout.takeAt(0)
                 widget = item.widget()
                 if widget:
                     widget.deleteLater()
-            
-            # Add new sliders
+
+            # 3. Get display list
             try:
-                self.displays = sbc.list_monitors()
+                all_displays = sbc.list_monitors()
                 valid_displays = []
-                for display in self.displays:
+                for d in all_displays:
                     try:
-                        # Test brightness retrieval for validation
-                        sbc.get_brightness(display=display)
-                        valid_displays.append(display)
-                    except Exception as e:
-                        print(f"Skipping display {display}: {e}")
+                        sbc.get_brightness(display=d)
+                        valid_displays.append(d)
+                    except Exception as exc:
+                        print(f"Skipping display {d}: {exc}")
                 self.displays = valid_displays
             except Exception as e:
                 print(f"Error listing monitors: {e}")
                 self.displays = []
 
+            # Re-add sliders for each valid display
             for display in self.displays:
                 try:
                     self.add_display_slider(display)
                 except Exception as e:
                     print(f"Error adding slider for display {display}: {e}")
-            
-            # Force UI update before resizing
-            QApplication.processEvents()
-            
-            # Calculate new height based on content
-            new_height = self.sliders_container.sizeHint().height() + 80  # Fixed offset
-            self.resize(current_width, min(new_height, 600))  # Set max height
-            
-            # Maintain minimum size
-            self.setMinimumSize(350, min(new_height, 600))
-            
-            # Prevent size bloat
-            self.adjustSize()
-            
-        except Exception as e:
-            print(f"Refresh error: {e}")
-        finally:
-            self.is_refreshing = False
-            QTimer.singleShot(100, lambda: self.setMinimumHeight(self.height()))
 
+            self.sliders_container.layout().activate()
+            self.main_widget.layout().activate()
+
+            if self.old_displays != valid_displays or update_geometry == True:
+                self.old_displays = valid_displays
+                update_geometry = False
+                try:
+                    # 2) Process any pending events (ensures the above layout changes apply)
+                    QApplication.processEvents()
+
+                    # 3) Finally adjust the main window size
+                    self.adjustSize()
+
+                    # 4) Optionally schedule a final adjust in case the layout needs a second pass
+                    QTimer.singleShot(0, self.adjustSize)
+                except:
+                    print("Failed to update size")
+
+        finally:
+            # Mark refresh done
+            self.is_refreshing = False
 
     def add_display_slider(self, display):
+        """Creates a QFrame holding a label + brightness slider."""
         frame = QFrame()
         frame.setObjectName("SliderFrame")
+        # Make each frame a constant height so they won't shrink/grow
+        frame.setMinimumHeight(80)
+        frame.setMaximumHeight(80)
+        frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
         frame_layout = QVBoxLayout(frame)
-        frame_layout.setContentsMargins(8, 4, 8, 4)  # Reduced from 12,8,12,8
-        frame_layout.setSpacing(4)  # Reduced from 6
+        frame_layout.setContentsMargins(8, 4, 8, 4)
+        frame_layout.setSpacing(4)
 
         # Display label
         display_label = QLabel(display)
-        display_label.setFont(QFont("Segoe UI Semibold", 10))  # Smaller font (from 11)
+        display_label.setFont(QFont("Segoe UI Semibold", 10))
         display_label.setContentsMargins(2, 0, 0, 0)
-        
+
         # Slider row
         slider_row = QHBoxLayout()
         slider_row.setContentsMargins(0, 0, 0, 0)
-        slider_row.setSpacing(5)  # Reduced from 10
-        
+        slider_row.setSpacing(5)
+
         brightness_slider = StyledSlider(Qt.Horizontal, self.accent_color)
         brightness_slider.setRange(0, 100)
         brightness_slider.setValue(self.get_brightness(display))
-        brightness_slider.valueChanged.connect(lambda v, d=display: self.change_brightness(d, v))
-        
+        brightness_slider.valueChanged.connect(
+            lambda v, d=display: self.change_brightness(d, v)
+        )
+
         value_label = QLabel(f"{self.get_brightness(display)}%")
-        value_label.setFont(QFont("Segoe UI", 9))  # Smaller font (from 10)
-        value_label.setFixedWidth(35)  # More compact (from 40)
+        value_label.setFont(QFont("Segoe UI", 9))
+        value_label.setFixedWidth(35)
         value_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        
+
         slider_row.addWidget(brightness_slider)
         slider_row.addWidget(value_label)
 
         frame_layout.addWidget(display_label)
         frame_layout.addLayout(slider_row)
-        
-        # Subtle hover effect
-        frame.enterEvent = lambda e: frame.setStyleSheet(f"background-color: {self.accent_color.lighter(150).name()};")
-        frame.leaveEvent = lambda e: frame.setStyleSheet("background-color: transparent;")
-        
+
+        # Optional subtle hover effect
+        # frame.enterEvent = lambda e: frame.setStyleSheet(
+        #     f"background-color: {self.accent_color.lighter(150).name()};"
+        # )
+        # frame.leaveEvent = lambda e: frame.setStyleSheet("background-color: transparent;")
+
         self.sliders_layout.addWidget(frame)
 
+        # Keep value label in sync
         brightness_slider.valueChanged.connect(lambda v: value_label.setText(f"{v}%"))
 
-
+    # ---------------------
+    # Brightness handling
+    # ---------------------
     def change_brightness(self, display, brightness):
         try:
             sbc.set_brightness(brightness, display=display)
@@ -336,6 +442,9 @@ class BrightnessControlApp(QMainWindow):
             print(f"Error setting brightness for {display}: {e}")
 
     def update_brightness_values(self):
+        """Periodically update each slider with the actual current brightness
+        in case it was changed by another tool or hotkey.
+        """
         try:
             for i in range(self.sliders_layout.count()):
                 frame = self.sliders_layout.itemAt(i).widget()
@@ -354,45 +463,38 @@ class BrightnessControlApp(QMainWindow):
         except Exception as e:
             print(f"Error updating brightness values: {e}")
 
-
     def get_brightness(self, display):
+        """Safely get brightness from a display, fallback to 50% on error."""
         try:
             return sbc.get_brightness(display=display)[0]
         except Exception as e:
             print(f"Error getting brightness for {display}: {e}")
-            return 50  # Default fallback
 
-    def get_dark_mode_status(self):
-        try:
-            import winreg
-            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, 
-                                r"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize")
-            value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")
-            return value == 0
-        except Exception as e:
-            print(f"Error accessing dark mode status: {e}")
-            return False
+            try:
+                self.refresh_displays()
+            except:
+                return 50  # fallback
 
-
-    def get_accent_color(self):
-        try:
-            import winreg
-            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, 
-                                r"Software\\Microsoft\\Windows\\DWM")
-            value, _ = winreg.QueryValueEx(key, "AccentColor")
-            hex_color = f"#{value & 0xFFFFFF:06X}"  # Convert to hex color
-            return QColor(hex_color)
-        except Exception:
-            return QColor(0, 120, 215)  # Default blue accent
-
+    # ---------------------
+    # Theming
+    # ---------------------
     def update_stylesheet(self):
-        # Dynamic colors
+        """Re-apply dark/light theme and accent color to the entire UI."""
         text_color = "#ffffff" if self.is_dark_mode else "#333333"
         base_alpha = 240 if self.transparency_enabled else 255
-        bg_color = QColor(45, 45, 45, base_alpha) if self.is_dark_mode else QColor(255, 255, 255, base_alpha)
-        frame_color = QColor(70, 70, 70, base_alpha-40) if self.is_dark_mode else QColor(240, 240, 240, base_alpha-40)
+        bg_color = (
+            QColor(45, 45, 45, base_alpha)
+            if self.is_dark_mode
+            else QColor(255, 255, 255, base_alpha)
+        )
+        frame_color = (
+            QColor(70, 70, 70, base_alpha - 40)
+            if self.is_dark_mode
+            else QColor(240, 240, 240, base_alpha - 40)
+        )
 
-        self.setStyleSheet(f"""
+        self.setStyleSheet(
+            f"""
             #MainWidget {{
                 background-color: {bg_color.name(QColor.HexArgb)};
                 color: {text_color};
@@ -421,15 +523,12 @@ class BrightnessControlApp(QMainWindow):
                 color: {text_color};
                 font-family: 'Segoe UI';
             }}
-        """)
+        """
+        )
 
-        # Update all existing labels
-        for i in range(self.sliders_layout.count()):
-            frame = self.sliders_layout.itemAt(i).widget()
-            if frame:
-                for child in frame.findChildren(QLabel):
-                    child.setStyleSheet(f"color: {text_color};")
-
+    # ---------------------
+    # Window moving
+    # ---------------------
     def mousePressEvent(self, event):
         self.old_pos = event.globalPos()
 
@@ -438,16 +537,25 @@ class BrightnessControlApp(QMainWindow):
         self.move(self.x() + delta.x(), self.y() + delta.y())
         self.old_pos = event.globalPos()
 
+
+# -------------------------
+# Main Execution
+# -------------------------
 if __name__ == "__main__":
-    import logging
-    logging.basicConfig(level=logging.DEBUG)
-    logging.debug("App starting...")
-    
-    try:
-        app = QApplication(sys.argv)
-        window = BrightnessControlApp()
-        window.show()
-        logging.debug("Window shown...")
-        sys.exit(app.exec_())
-    except Exception as e:
-        logging.error(f"Fatal error: {e}")
+    # import logging
+    # logging.basicConfig(level=logging.DEBUG)
+    # logging.debug("App starting...")
+
+    # try:
+    #     app = QApplication(sys.argv)
+    #     window = BrightnessControlApp()
+    #     window.show()
+    #     logging.debug("Window shown...")
+    #     sys.exit(app.exec_())
+    # except Exception as e:
+    #     logging.error(f"Fatal error: {e}")
+    app = QApplication(sys.argv)
+    window = BrightnessControlApp()
+    window.show()
+    # logging.debug("Window shown...")
+    sys.exit(app.exec_())
