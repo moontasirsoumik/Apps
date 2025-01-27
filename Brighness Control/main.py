@@ -164,6 +164,7 @@ class StyledSlider(QSlider):
 class BrightnessControlApp(QMainWindow):
     def __init__(self):
         super().__init__()
+        
         self.accent_color = self.get_accent_color()
         self.is_dark_mode = self.get_dark_mode_status()
         self.transparency_enabled = self.get_transparency_status()
@@ -216,18 +217,27 @@ class BrightnessControlApp(QMainWindow):
                 self.show_window_in_tray_area()
             else:
                 self.hide()
-
-    def show_window_in_tray_area(self):
-        """Position and show the window near the system tray area."""
+    def reposition_window(self):
+        """Reposition the window to stay above taskbar"""
         screen = QApplication.screenAt(QCursor.pos())
-        if screen:
+        if screen and self.isVisible():
             screen_geo = screen.availableGeometry()
             x = screen_geo.right() - self.width() - 20
             y = screen_geo.bottom() - self.height() - 50
             self.move(x, y)
+            
+    def show_window_in_tray_area(self):
+        """Position and show the window near the system tray area."""
         self.show()
+        self.reposition_window()  # Moved positioning to separate method
         self.raise_()
         self.activateWindow()
+        
+    def resizeEvent(self, event):
+        """Handle window resizing to maintain proper position"""
+        super().resizeEvent(event)
+        self.reposition_window()
+        QTimer.singleShot(10, self.reposition_window)  # Double-check after layout updates
 
     # --------------------------
     # OS/Theme/Accent utilities
@@ -288,30 +298,34 @@ class BrightnessControlApp(QMainWindow):
         self.main_widget = QWidget()
         self.main_widget.setObjectName("MainWidget")
         self.setCentralWidget(self.main_widget)
+        self.main_widget.setMinimumHeight(100)
 
         layout = QVBoxLayout(self.main_widget)
         layout.setContentsMargins(15, 15, 15, 15)
         layout.setSpacing(12)
 
         # Header
-        header_layout = QHBoxLayout()
-        header_layout.setContentsMargins(0, 0, 0, 0)
-        header_layout.setSpacing(10)
+        self.header_layout = QHBoxLayout()
+        self.header_layout.setContentsMargins(0, 0, 0, 0)
+        self.header_layout.setSpacing(10)
 
         self.title_label = QLabel("Brightness")
-        self.title_label.setFont(QFont("Segoe UI Variable", 16, QFont.Bold))
+        self.title_label.setObjectName("TitleLabel")
+        self.title_label.setFont(QFont("Segoe UI", 12, QFont.Bold))
 
         self.refresh_button = QPushButton("⟳ Refresh")
-        self.refresh_button.setFont(QFont("Segoe UI Variable", 10))
+        self.refresh_button.setFont(QFont("Segoe UI", 10))
+        self.refresh_button.setMinimumWidth(85)
+        self.refresh_button.setMaximumWidth(85)
         self.refresh_button.setIcon(QIcon.fromTheme("view-refresh"))
         self.refresh_button.setIconSize(QSize(16, 16))
         self.refresh_button.setCursor(Qt.PointingHandCursor)
         self.refresh_button.clicked.connect(self.refresh_displays)
         self.refresh_button.setObjectName("RefreshButton")
 
-        header_layout.addWidget(self.title_label)
-        header_layout.addWidget(self.refresh_button)
-        layout.addLayout(header_layout)
+        self.header_layout.addWidget(self.title_label)
+        self.header_layout.addWidget(self.refresh_button)
+        layout.addLayout(self.header_layout)
 
         # Sliders container
         self.sliders_container = QWidget()
@@ -328,6 +342,31 @@ class BrightnessControlApp(QMainWindow):
         shadow.setOffset(0, 4)
         self.main_widget.setGraphicsEffect(shadow)
 
+    def calculate_min_height(self):
+        # Force layout recalculation
+        self.sliders_container.updateGeometry()
+        self.main_widget.updateGeometry()
+        
+        # Get heights from layout system
+        header_height = self.header_layout.sizeHint().height()
+        sliders_height = self.sliders_container.sizeHint().height()
+        
+        # Account for margins and spacing
+        margins = self.main_widget.layout().contentsMargins()
+        spacing = self.main_widget.layout().spacing()
+        
+        total_height = (
+            header_height
+            + sliders_height
+            + margins.top()
+            + margins.bottom()
+            + spacing
+        )
+        
+        # Set minimum heights
+        self.main_widget.setMinimumHeight(total_height)
+        self.setMinimumHeight(total_height)
+        
     def setup_animations(self):
         # Fade-in animation
         self.opacity_anim = QPropertyAnimation(self.main_widget, b"windowOpacity")
@@ -350,7 +389,7 @@ class BrightnessControlApp(QMainWindow):
 
         update_geometry = False
         self.is_refreshing = True
-        self.refresh_button.setText("⟳ Refreshing...")
+        self.refresh_button.setText("Refreshing")
         QTimer.singleShot(500, lambda: self.refresh_button.setText("⟳ Refresh"))
 
         # Restore the button text after a short delay
@@ -414,6 +453,9 @@ class BrightnessControlApp(QMainWindow):
                     QApplication.processEvents()
 
                     # 3) Finally adjust the main window size
+                    self.calculate_min_height()
+                    self.reposition_window()
+                    QTimer.singleShot(10, self.reposition_window)  # Final position verify
                     self.adjustSize()
 
                     # 4) Optionally schedule a final adjust in case the layout needs a second pass
@@ -429,9 +471,16 @@ class BrightnessControlApp(QMainWindow):
         """Creates a QFrame holding a label + brightness slider."""
         frame = QFrame()
         frame.setObjectName("SliderFrame")
+        frame.setStyleSheet("""
+        #SliderFrame {
+            background-color: transparent;
+            border-radius: 6px;
+            border: 1px solid rgba(0, 0, 0, 15);
+        }
+    """)
         # Make each frame a constant height so they won't shrink/grow
-        frame.setMinimumHeight(80)
-        frame.setMaximumHeight(80)
+        frame.setMinimumHeight(60)
+        frame.setMaximumHeight(60)
         frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         frame_layout = QVBoxLayout(frame)
@@ -440,7 +489,8 @@ class BrightnessControlApp(QMainWindow):
 
         # Display label
         display_label = QLabel(display)
-        display_label.setFont(QFont("Segoe UI Variable", 10))
+        display_label.setObjectName("DisplayLabel")
+        display_label.setFont(QFont("Segoe UI", 10))
         display_label.setContentsMargins(2, 0, 0, 0)
 
         # Slider row
@@ -456,7 +506,8 @@ class BrightnessControlApp(QMainWindow):
         )
 
         value_label = QLabel(f"{self.get_brightness(display)}%")
-        value_label.setFont(QFont("Segoe UI Variable", 9))
+        value_label.setObjectName("ValueLabel")
+        value_label.setFont(QFont("Segoe UI", 10))
         value_label.setFixedWidth(35)
         value_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
@@ -467,10 +518,21 @@ class BrightnessControlApp(QMainWindow):
         frame_layout.addLayout(slider_row)
 
         # Optional subtle hover effect
-        # frame.enterEvent = lambda e: frame.setStyleSheet(
-        #     f"background-color: {self.accent_color.lighter(150).name()};"
-        # )
-        # frame.leaveEvent = lambda e: frame.setStyleSheet("background-color: transparent;")
+        # In your add_display_slider method, modify the hover effects:
+        frame.enterEvent = lambda e, f=frame: f.setStyleSheet(
+        f"""
+            #SliderFrame {{
+                background-color: rgba({self.accent_color.red()}, {self.accent_color.green()}, {self.accent_color.blue()}, 13);
+                border: 1px solid rgba({self.accent_color.red()}, {self.accent_color.green()}, {self.accent_color.blue()}, 30);
+            }}
+            """
+        )
+        frame.leaveEvent = lambda e, f=frame: f.setStyleSheet("""
+            #SliderFrame {
+                background-color: transparent;
+                border: 1px solid rgba(0, 0, 0, 15);
+            }
+        """)
 
         self.sliders_layout.addWidget(frame)
 
@@ -552,6 +614,7 @@ class BrightnessControlApp(QMainWindow):
             }}
             #RefreshButton {{
                 background-color: {self.accent_color.name()};
+                font-family: 'Segoe UI';
                 color: {text_color};
                 border: none;
                 padding: 4px 8px;
@@ -567,6 +630,23 @@ class BrightnessControlApp(QMainWindow):
             QLabel {{
                 color: {text_color};
                 font-family: 'Segoe UI';
+                font-weight: 500;
+            }}
+            #TitleLabel {{
+                color: {text_color};
+                font-family: 'Segoe UI';
+                font-weight: 600;
+                padding-left: 8px;
+            }}
+            #DisplayLabel {{
+                color: {text_color};
+                font-family: 'Segoe UI';
+                font-weight: 500;
+            }}
+            #ValueLabel {{
+                color: {text_color};
+                font-family: 'Segoe UI';
+                font-weight: 500;
             }}
         """
         )
