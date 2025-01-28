@@ -148,7 +148,6 @@ class BrightnessControlApp(QMainWindow):
         self.tray_icon.show()
         self.hide()
         QApplication.instance().installEventFilter(self)
-        exit_action.triggered.connect(self.clean_exit)
 
     def on_tray_icon_activated(self, reason):
         if reason == QSystemTrayIcon.Trigger:
@@ -303,12 +302,17 @@ class BrightnessControlApp(QMainWindow):
     def add_display_slider(self, display):
         frame = QFrame()
         frame.setObjectName("SliderFrame")
-        frame.setStyleSheet("""
-            #SliderFrame {
+        if self.is_dark_mode:
+            border_color = "rgba(255, 255, 255, 15)"
+        else:
+            border_color = "rgba(0, 0, 0, 15)"
+
+        frame.setStyleSheet(f"""
+            #SliderFrame {{
                 background-color: transparent;
                 border-radius: 6px;
-                border: 1px solid rgba(0, 0, 0, 15);
-            }
+                border: 1px solid {border_color};
+            }}
         """)
         frame.setMinimumHeight(60)
         frame.setMaximumHeight(60)
@@ -354,11 +358,16 @@ class BrightnessControlApp(QMainWindow):
             }}
             """
         )
-        frame.leaveEvent = lambda e, f=frame: f.setStyleSheet("""
-            #SliderFrame {
+        if self.is_dark_mode:
+            border_color = "rgba(255, 255, 255, 15)"
+        else:
+            border_color = "rgba(0, 0, 0, 15)"
+        
+        frame.leaveEvent = lambda e, f=frame: f.setStyleSheet(f"""
+            #SliderFrame {{
                 background-color: transparent;
-                border: 1px solid rgba(0, 0, 0, 15);
-            }
+                border: 1px solid {border_color};
+            }}
         """)
 
         self.sliders_layout.addWidget(frame)
@@ -445,6 +454,3 @@ class BrightnessControlApp(QMainWindow):
         if self.isVisible() and not self.tray_menu_visible:
             self.hide()
         super().focusOutEvent(event)
-        
-    def clean_exit(self):
-        QApplication.instance().exit(100) 
