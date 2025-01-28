@@ -14,25 +14,26 @@ from backend import *
 
 
 class HollowHandleStyle(QProxyStyle):
+    """ Slider style with hollow handle using accent color """
+
     def __init__(self, accent_color: QColor, config: dict = None):
         super().__init__()
         self.config = {
-            "groove.height": 4,
+            "groove.height": 3,
             "sub-page.color": accent_color,
-            "add-page.color": QColor(200, 200, 200, 50),
+            "add-page.color": QColor(200, 200, 200, 50),  # Light gray with transparency
             "handle.color": accent_color,
             "handle.ring-width": 3,
-            "handle.hollow-radius": 5,
-            "handle.margin": 3,
-            "groove.radius": 2,
+            "handle.hollow-radius": 4,
+            "handle.margin": 2
         }
         if config:
             self.config.update(config)
-        w = (
-            self.config["handle.margin"]
-            + self.config["handle.ring-width"]
-            + self.config["handle.hollow-radius"]
-        )
+
+        # Calculate handle size
+        w = (self.config["handle.margin"] + 
+             self.config["handle.ring-width"] + 
+             self.config["handle.hollow-radius"])
         self.config["handle.size"] = QSize(2 * w, 2 * w)
 
     def subControlRect(self, cc, opt, sc, widget):
@@ -40,6 +41,7 @@ class HollowHandleStyle(QProxyStyle):
             return super().subControlRect(cc, opt, sc, widget)
 
         rect = opt.rect
+
         if sc == self.SC_SliderGroove:
             h = self.config["groove.height"]
             return QRectF(0, (rect.height() - h) // 2, rect.width(), h).toRect()
@@ -55,59 +57,56 @@ class HollowHandleStyle(QProxyStyle):
         if cc != self.CC_Slider or opt.orientation != Qt.Horizontal:
             return super().drawComplexControl(cc, opt, painter, widget)
 
-        grooveRect = self.subControlRect(cc, opt, self.SC_SliderGroove, widget)
-        handleRect = self.subControlRect(cc, opt, self.SC_SliderHandle, widget)
-        painter.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
+        groove_rect = self.subControlRect(cc, opt, self.SC_SliderGroove, widget)
+        handle_rect = self.subControlRect(cc, opt, self.SC_SliderHandle, widget)
+        painter.setRenderHints(QPainter.Antialiasing)
         painter.setPen(Qt.NoPen)
 
+        # Draw groove
         painter.save()
-        painter.translate(grooveRect.topLeft())
-        groove_path = QPainterPath()
-        groove_path.addRoundedRect(0, 0, grooveRect.width(), self.config["groove.height"], 
-                                 self.config["groove.radius"], self.config["groove.radius"])
+        painter.translate(groove_rect.topLeft())
+        groove_height = self.config["groove.height"]
 
+        # Draw filled part
+        filled_width = handle_rect.x() - groove_rect.x()
+        painter.setBrush(self.config["sub-page.color"])
+        painter.drawRect(0, 0, filled_width, groove_height)
+
+        # Draw unfilled part
+        unfilled_start = filled_width + handle_rect.width()
+        unfilled_width = groove_rect.width() - filled_width
         painter.setBrush(self.config["add-page.color"])
-        painter.drawPath(groove_path)
-
-        filled_width = handleRect.x() - grooveRect.x() + handleRect.width() / 2
-        filled_groove = QPainterPath()
-        filled_groove.addRoundedRect(0, 0, filled_width, self.config["groove.height"],
-                                   self.config["groove.radius"], self.config["groove.radius"])
-
-        gradient = QLinearGradient(0, 0, filled_width, 0)
-        gradient.setColorAt(0, self.config["sub-page.color"].lighter(120))
-        gradient.setColorAt(1, self.config["sub-page.color"])
-        painter.setBrush(gradient)
-        painter.drawPath(filled_groove)
+        painter.drawRect(unfilled_start, 0, unfilled_width, groove_height)
         painter.restore()
 
-        ringWidth = self.config["handle.ring-width"]
-        hollowRadius = self.config["handle.hollow-radius"]
-        radius = ringWidth + hollowRadius
+        # Draw handle
+        ring_width = self.config["handle.ring-width"]
+        hollow_radius = self.config["handle.hollow-radius"]
+        radius = ring_width + hollow_radius
+
         path = QPainterPath()
-        center = handleRect.center()
+        center = handle_rect.center()
         path.addEllipse(center, radius, radius)
-        path.addEllipse(center, hollowRadius, hollowRadius)
+        path.addEllipse(center, hollow_radius, hollow_radius)
 
-        handleColor = self.config["handle.color"]
-        handleColor.setAlpha(255 if opt.activeSubControls != self.SC_SliderHandle else 200)
+        handle_color = self.config["handle.color"]
+        handle_color.setAlpha(255 if opt.activeSubControls != self.SC_SliderHandle else 153)
 
-        painter.setPen(Qt.NoPen)
-        shadow = QRadialGradient(center, radius, center)
-        shadow.setColorAt(0, handleColor.lighter(150))
-        shadow.setColorAt(1, handleColor)
-        painter.setBrush(QBrush(shadow))
-        painter.drawEllipse(center, radius + 1, radius + 1)
-
-        painter.setBrush(handleColor)
+        painter.setBrush(handle_color)
         painter.drawPath(path)
+
+        # Draw pressed state
+        if widget.isSliderDown():
+            handle_color.setAlpha(255)
+            painter.setBrush(handle_color)
+            painter.drawEllipse(handle_rect)
 
 class StyledSlider(QSlider):
     def __init__(self, orientation, accent_color, parent=None):
         super().__init__(orientation, parent)
         self.setStyle(HollowHandleStyle(accent_color))
         self.setCursor(Qt.PointingHandCursor)
-
+        
 class BrightnessControlApp(QMainWindow):
     def __init__(self):
         super().__init__()
