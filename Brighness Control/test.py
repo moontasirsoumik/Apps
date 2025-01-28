@@ -13,52 +13,59 @@
 #     print(f"Error listing monitors: {e}")
 
 import ctypes
-from ctypes import wintypes
+import ctypes.wintypes
+import threading
 
-class LOGFONTW(ctypes.Structure):
-    _fields_ = [
-        ("lfHeight", ctypes.c_long),
-        ("lfWidth", ctypes.c_long),
-        ("lfEscapement", ctypes.c_long),
-        ("lfOrientation", ctypes.c_long),
-        ("lfWeight", ctypes.c_long),
-        ("lfItalic", ctypes.c_byte),
-        ("lfUnderline", ctypes.c_byte),
-        ("lfStrikeOut", ctypes.c_byte),
-        ("lfCharSet", ctypes.c_byte),
-        ("lfOutPrecision", ctypes.c_byte),
-        ("lfClipPrecision", ctypes.c_byte),
-        ("lfQuality", ctypes.c_byte),
-        ("lfPitchAndFamily", ctypes.c_byte),
-        ("lfFaceName", ctypes.c_wchar * 32)
-    ]
+class BrightnessMonitor:
+    def __init__(self):
+        self.running = False
+        self.hwnd = None
 
-class NONCLIENTMETRICS(ctypes.Structure):
-    _fields_ = [
-        ("cbSize", ctypes.c_uint),
-        ("iBorderWidth", ctypes.c_int),
-        ("iScrollWidth", ctypes.c_int),
-        ("iScrollHeight", ctypes.c_int),
-        ("iCaptionWidth", ctypes.c_int),
-        ("iCaptionHeight", ctypes.c_int),
-        ("lfCaptionFont", LOGFONTW),
-        ("iSmCaptionWidth", ctypes.c_int),
-        ("iSmCaptionHeight", ctypes.c_int),
-        ("lfSmCaptionFont", LOGFONTW),
-        ("iMenuWidth", ctypes.c_int),
-        ("iMenuHeight", ctypes.c_int),
-        ("lfMenuFont", LOGFONTW),
-        ("lfStatusFont", LOGFONTW),
-        ("lfMessageFont", LOGFONTW),
-    ]
+    def start(self):
+        self.running = True
+        threading.Thread(target=self._monitor_brightness).start()
 
-def get_system_font():
-    ncm = NONCLIENTMETRICS()
-    ncm.cbSize = ctypes.sizeof(NONCLIENTMETRICS)
-    ctypes.windll.user32.SystemParametersInfoW(41, ncm.cbSize, ctypes.byref(ncm), 0)
-    return ncm.lfMessageFont
+    def stop(self):
+        self.running = False
+        if self.hwnd:
+            ctypes.windll.user32.DestroyWindow(self.hwnd)
 
-font_info = get_system_font()
-print(f"Font Name: {font_info.lfFaceName}")
-print(f"Font Height: {font_info.lfHeight}")
-print(f"Font Weight: {font_info.lfWeight}")
+    def _monitor_brightness(self):
+        WNDPROCTYPE = ctypes.WINFUNCTYPE(ctypes.c_long, ctypes.c_int, ctypes.c_uint, ctypes.c_int, ctypes.c_int)
+        self.hwnd = ctypes.windll.user32.CreateWindowExW(0, "STATIC", "BrightnessMonitor", 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        ctypes.windll.user32.UpdateWindow(self.hwnd)
+
+        def window_proc(hwnd, msg, wparam, lparam):
+            if msg == ctypes.windll.user32.RegisterPowerSettingNotification:
+                print("Brightness changed")
+            return ctypes.windll.user32.DefWindowProcW(hwnd, msg, wparam, lparam)
+
+        wndproc = WNDPROCTYPE(window_proc)
+        ctypes.windll.user32.SetWindowLongPtrW(self.hwnd, -4, wndproc)
+
+        class GUID(ctypes.Structure):
+            _fields_ = [
+                ("Data1", ctypes.wintypes.DWORD),
+                ("Data2", ctypes.wintypes.WORD),
+                ("Data3", ctypes.wintypes.WORD),
+                ("Data4", ctypes.c_byte * 8)
+            ]
+
+        power_setting_guid = GUID(0xaded5e82, 0xb909, 0x4619, (0x99, 0x49, 0xf5, 0xd7, 0x1d, 0xac, 0x0b, 0xcb))
+        ctypes.windll.user32.RegisterPowerSettingNotification(self.hwnd, ctypes.byref(power_setting_guid), 0)
+
+        msg = ctypes.wintypes.MSG()
+        while self.running:
+            if ctypes.windll.user32.GetMessageW(ctypes.byref(msg), 0, 0, 0) != 0:
+                ctypes.windll.user32.TranslateMessage(ctypes.byref(msg))
+                ctypes.windll.user32.DispatchMessageW(ctypes.byref(msg))
+
+if __name__ == "__main__":
+    monitor = BrightnessMonitor()
+    monitor.start()
+    try:
+        while True:
+            pass
+    except KeyboardInterrupt:
+        monitor.stop()
+

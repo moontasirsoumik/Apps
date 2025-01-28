@@ -148,6 +148,7 @@ class BrightnessControlApp(QMainWindow):
         self.tray_icon.show()
         self.hide()
         QApplication.instance().installEventFilter(self)
+        exit_action.triggered.connect(self.clean_exit)
 
     def on_tray_icon_activated(self, reason):
         if reason == QSystemTrayIcon.Trigger:
@@ -160,8 +161,8 @@ class BrightnessControlApp(QMainWindow):
         screen = QApplication.screenAt(QCursor.pos())
         if screen and self.isVisible():
             screen_geo = screen.availableGeometry()
-            x = screen_geo.right() - self.width() - 20
-            y = screen_geo.bottom() - self.height() - 50
+            x = screen_geo.right() - self.width() - 10
+            y = screen_geo.bottom() - self.height() - 10
             self.move(x, y)
 
     def show_window_in_tray_area(self):
@@ -213,11 +214,11 @@ class BrightnessControlApp(QMainWindow):
         self.sliders_layout.setSpacing(6)
         layout.addWidget(self.sliders_container)
 
-        shadow = QGraphicsDropShadowEffect()
-        shadow.setBlurRadius(20)
-        shadow.setColor(QColor(0, 0, 0, 80))
-        shadow.setOffset(0, 4)
-        self.main_widget.setGraphicsEffect(shadow)
+        # shadow = QGraphicsDropShadowEffect()
+        # shadow.setBlurRadius(20)
+        # shadow.setColor(QColor(0, 0, 0, 80))
+        # shadow.setOffset(0, 4)
+        # self.main_widget.setGraphicsEffect(shadow)
 
     def calculate_min_height(self):
         self.sliders_container.updateGeometry()
@@ -444,3 +445,6 @@ class BrightnessControlApp(QMainWindow):
         if self.isVisible() and not self.tray_menu_visible:
             self.hide()
         super().focusOutEvent(event)
+        
+    def clean_exit(self):
+        QApplication.instance().exit(100) 
