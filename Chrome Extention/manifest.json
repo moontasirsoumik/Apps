@@ -1,0 +1,14 @@
+{
+    "name": "My Custom New Tab",
+    "description": "A simple Chrome extension that provides a custom new tab with weather, time, and a fun background.",
+    "version": "1.0",
+    "manifest_version": 3,
+    "chrome_url_overrides": {
+      "newtab": "newtab.html"
+    },
+    "permissions": [
+      "geolocation",
+      "storage"
+    ]
+  }
+  
