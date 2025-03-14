@@ -1,0 +1,374 @@
+/* Base reset */
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    font-family: 'Roboto', sans-serif;
+    font-size: 1rem;
+    line-height: 1.4;
+    color: #333;
+}
+
+/* Map container */
+#mapContainer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+}
+#mapContainer iframe {
+    position: absolute !important;
+    top: 0;
+    left: 0;
+    width: 100vw !important;
+    height: 100vh !important;
+    object-fit: cover !important;
+    border: none !important;
+}
+#map {
+    width: 100%;
+    height: 100%;
+}
+
+/* TOP LEFT: just the left panel toggle now */
+#topLeftContainer {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 2000;
+}
+
+/* COLLAPSIBLE SEARCH BAR */
+#searchToggleContainer {
+    position: absolute;
+    top: 70px; /* slightly below the left panel toggle */
+    left: 20px;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+}
+#toggleSearchBar {
+    border-radius: 4px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    padding: 8px 12px;
+    width: 40px; /* Ensures the button width remains the same */
+    height: 38px;
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+#searchBar {
+    background: #fff;
+    border-radius: 4px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    padding: 5px;
+    margin-left: 8px;
+    height: 40px;
+    width: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: width 0.3s, opacity 0.3s;
+    display: flex;
+    align-items: center;
+}
+#searchBar input {
+    border: none;
+    outline: none;
+    width: 100%;
+    height: 100%;
+    font-size: 1rem;
+}
+#searchBar.open {
+    width: 250px;
+    opacity: 1;
+}
+
+/* Right panel toggle */
+#toggleRightPanel {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 2000;
+}
+
+/* Floating tiles/panels */
+.floating-tile {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    padding: 10px;
+}
+.close-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: transparent;
+    border: none;
+    font-size: 1rem;
+    cursor: pointer;
+    color: #888;
+}
+.close-btn:hover {
+    color: #333;
+}
+.panel-left {
+    position: absolute;
+    top: 80px;
+    left: 20px;
+    width: 300px;
+    max-height: 80vh;
+    overflow-y: auto;
+    transition: transform 0.4s ease;
+    transform: translateX(-110%);
+    z-index: 2000;
+    font-size: 1rem;
+}
+.panel-left.open {
+    transform: translateX(0);
+}
+.panel-right {
+    position: absolute;
+    top: 80px;
+    right: 20px;
+    width: 300px;
+    max-height: 80vh;
+    overflow-y: auto;
+    transition: transform 0.4s ease;
+    transform: translateX(110%);
+    z-index: 2000;
+    font-size: 1rem;
+}
+.panel-right.open {
+    transform: translateX(0);
+}
+.panel-content {
+    padding: 10px;
+}
+
+/* Select2 dropdown */
+.select2-container {
+    z-index: 3000 !important;
+    font-size: 1rem;
+}
+
+/* Mosque tile styling */
+.mosque-tile {
+    background-color: #fff;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    transition: box-shadow 0.2s ease;
+    font-size: 1rem;
+}
+.mosque-tile:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+}
+.mosque-tile .mosque-info {
+    float: left;
+    width: 60%;
+    padding-right: 10px;
+}
+.mosque-tile .mosque-info h4 {
+    font-size: 1rem;
+    margin: 0 0 5px;
+    font-weight: 500;
+}
+.mosque-tile .mosque-info p {
+    font-size: 1rem;
+    margin: 2px 0;
+}
+.mosque-tile .mosque-info a {
+    font-size: 1rem;
+    margin-right: 8px;
+    color: #d9534f;
+    text-decoration: none;
+    font-weight: 500;
+}
+.mosque-tile .mosque-image {
+    float: right;
+    width: 40%;
+    text-align: center;
+}
+.mosque-tile .image-container {
+    width: 100%;
+    max-width: 120px;
+    height: 120px;
+    margin: auto;
+    overflow: hidden;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+.mosque-tile .image-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.clearfix::after {
+    content: "";
+    display: table;
+    clear: both;
+}
+
+/* Leaflet controls */
+.leaflet-control-zoom,
+.leaflet-control-fullscreen {
+    position: fixed !important;
+    z-index: 10000 !important;
+}
+.leaflet-control-zoom {
+    bottom: 60px !important;
+    right: 10px !important;
+}
+.leaflet-control-fullscreen {
+    bottom: 10px !important;
+    right: 10px !important;
+}
+
+/* Custom scrollbar in panels */
+.panel-left::-webkit-scrollbar,
+.panel-right::-webkit-scrollbar {
+    width: 6px;
+}
+.panel-left::-webkit-scrollbar-track,
+.panel-right::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+.panel-left::-webkit-scrollbar-thumb,
+.panel-right::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+/* jQuery UI Autocomplete suggestions */
+.ui-autocomplete {
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 4px 0;
+    margin: 0;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    z-index: 4000 !important;
+    list-style: none;
+    font-size: 1rem;
+    max-width: 90vw; /* keep within screen on phone */
+}
+.ui-autocomplete li {
+    padding: 4px 8px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.ui-autocomplete li:last-child {
+    border-bottom: none;
+}
+.ui-autocomplete li:hover,
+.ui-autocomplete li.ui-state-focus {
+    background-color: #f0f0f0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  #topLeftContainer {
+    top: 10px;
+    left: 10px;
+  }
+  #searchToggleContainer {
+    top: 50px;
+    left: 10px;
+  }
+  .panel-left, .panel-right {
+    width: 90%;
+    left: 5%;
+    right: 5%;
+    max-height: 70vh;
+  }
+  .mosque-tile {
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+  .mosque-tile .mosque-info {
+    width: 100%;
+    float: none;
+    padding-right: 0;
+  }
+  .mosque-tile .mosque-image {
+    width: 100%;
+    text-align: center;
+    margin-top: 10px;
+    float: none;
+  }
+}
+
+/* Adjust form elements, if needed */
+.select2-dropdown {
+    font-size: 16px; /* Adjust the font size as needed */
+}
+.select2-container .select2-selection--multiple {
+    box-sizing: border-box;
+    cursor: pointer;
+    display: block;
+    min-height: 32px;
+    user-select: none;
+    -webkit-user-select: none;
+    font-size: 16px;
+}
+.select2-container .select2-selection--single .select2-selection__rendered {
+    display: block;
+    padding-left: 8px;
+    padding-right: 20px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 16px;
+}
+.form-control-sm {
+    height: calc(1.5em + .5rem + 2px);
+    padding: .25rem .5rem;
+    font-size: .875rem;
+    line-height: 1.5;
+    border-radius: .2rem;
+    font-size: 16px;
+}
+
+
+.select2-dropdown {
+    font-size: 16px; /* Adjust the font size as needed */
+}
+
+.select2-container .select2-selection--multiple {
+    box-sizing: border-box;
+    cursor: pointer;
+    display: block;
+    min-height: 32px;
+    user-select: none;
+    -webkit-user-select: none;
+    font-size: 16px;
+}
+
+.select2-container .select2-selection--single .select2-selection__rendered {
+    display: block;
+    padding-left: 8px;
+    padding-right: 20px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 16px;
+}
+
+.form-control-sm {
+    height: calc(1.5em + .5rem + 2px);
+    padding: .25rem .5rem;
+    font-size: .875rem;
+    line-height: 1.5;
+    border-radius: .2rem;
+    font-size: 16px;
+}
+

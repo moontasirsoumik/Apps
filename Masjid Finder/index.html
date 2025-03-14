@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GPS Coordinates</title>
+    <script>
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(sendPosition, showError);
+            } else {
+                alert("Geolocation is not supported by this browser.");
+            }
+        }
+
+        function sendPosition(position) {
+            fetch('/get_location', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("output").innerText = "Latitude: " + data.latitude + ", Longitude: " + data.longitude;
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function showError(error) {
+            alert("Error getting location: " + error.message);
+        }
+    </script>
+</head>
+<body onload="getLocation()">
+    <h2>Fetching GPS Coordinates...</h2>
+    <p id="output">Waiting for GPS data...</p>
+</body>
+</html>

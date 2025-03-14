@@ -1,0 +1,128 @@
+/* Base styling using Roboto for a modern, clean look */
+body {
+    background-color: #eef1f5;
+    font-family: 'Roboto', sans-serif;
+    margin: 0;
+    padding: 0;
+    font-size: 0.9rem;
+    color: #333;
+}
+
+/* Center container with a fixed max-width */
+.center-container {
+    max-width: 1000px;
+    margin: auto;
+    padding: 10px;
+}
+
+/* Navbar adjustments */
+.navbar {
+    padding: 0.5rem 1rem;
+}
+.navbar-brand {
+    font-size: 1.2rem;
+    font-weight: 500;
+}
+
+/* Sidebar (Filters) styling */
+#sidebar .card {
+    margin-bottom: 15px;
+}
+#sidebar .card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    font-weight: 500;
+}
+
+/* Form controls for a compact and uniform look */
+.form-control,
+.form-control-sm {
+    font-size: 0.85rem;
+    padding: 0.35rem 0.5rem;
+}
+label {
+    font-size: 0.75rem;
+    font-weight: 400;
+}
+
+/* Mosque card styling */
+.mosque-tile {
+    background-color: #fff;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    transition: box-shadow 0.2s ease;
+}
+.mosque-tile:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+}
+.mosque-tile .mosque-info {
+    float: left;
+    width: 65%;
+    padding-right: 10px;
+}
+.mosque-tile .mosque-info h4 {
+    font-size: 1rem;
+    margin: 0 0 5px;
+    font-weight: 500;
+}
+.mosque-tile .mosque-info p {
+    font-size: 0.85rem;
+    margin: 2px 0;
+}
+.mosque-tile .mosque-info a {
+    font-size: 0.8rem;
+    margin-right: 8px;
+    color: #d9534f;
+    text-decoration: none;
+    font-weight: 500;
+}
+.mosque-tile .mosque-image {
+    float: right;
+    width: 35%;
+    text-align: center;
+}
+.mosque-tile .image-container {
+    width: 100%;
+    max-width: 120px;
+    height: 120px;
+    margin: auto;
+    overflow: hidden;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+.mosque-tile .image-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.clearfix::after {
+    content: "";
+    display: table;
+    clear: both;
+}
+
+/* Mosque list container: dynamically adjust height based on viewport */
+#mosqueCards {
+    max-height: calc(100vh - 320px); /* Adjusts based on viewport height */
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+/* Optional custom scrollbar styling */
+#mosqueCards::-webkit-scrollbar {
+    width: 6px;
+}
+#mosqueCards::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+#mosqueCards::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+/* Button adjustments */
+.btn {
+    font-size: 0.8rem;
+}
