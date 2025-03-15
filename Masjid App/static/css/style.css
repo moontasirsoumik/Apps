@@ -1,459 +1,459 @@
 /* ========================
    CSS Variables & Base Reset
    ======================== */
-   :root {
-    --primary-color: #333;
-    --secondary-color: #555;
-    --accent-color: #007bff;
-    --light-bg: #ffffff;
-    --panel-bg: #ffffff;
-    --shadow-light: 0 2px 6px rgba(0, 0, 0, 0.08);
-    --shadow-medium: 0 4px 10px rgba(0, 0, 0, 0.15);
-    --transition-speed: 0.3s;
-    --border-radius: 8px;
-  }
-  
-  html, body {
-    margin: 0;
-    padding: 0;
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden;
-    font-family: 'Roboto', sans-serif;
-    font-size: 1rem;
-    line-height: 1.4;
-    color: var(--primary-color);
-    background: var(--light-bg);
-  }
-  
-  /* ========================
+:root {
+  --primary-color: #333;
+  --secondary-color: #555;
+  --accent-color: #007bff;
+  --light-bg: #ffffff;
+  --panel-bg: #ffffff;
+  --shadow-light: 0 2px 6px rgba(0, 0, 0, 0.08);
+  --shadow-medium: 0 4px 10px rgba(0, 0, 0, 0.15);
+  --transition-speed: 0.3s;
+  --border-radius: 8px;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  font-family: "Roboto", sans-serif;
+  font-size: 1rem;
+  line-height: 1.4;
+  color: var(--primary-color);
+  background: var(--light-bg);
+}
+
+/* ========================
      Map Container
      ======================== */
-  #mapContainer {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    overflow: hidden;
-  }
-  #mapContainer iframe {
-    position: absolute !important;
-    top: 0;
-    left: 0;
-    width: 100vw !important;
-    height: 100vh !important;
-    object-fit: cover !important;
-    border: none !important;
-  }
-  #map {
-    width: 100%;
-    height: 100%;
-  }
-  
-  /* ========================
+#mapContainer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+}
+#mapContainer iframe {
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  width: 100vw !important;
+  height: 100vh !important;
+  object-fit: cover !important;
+  border: none !important;
+}
+#map {
+  width: 100%;
+  height: 100%;
+}
+
+/* ========================
      Top & Side Panel Toggles
      ======================== */
-  #topLeftContainer,
-  #toggleRightPanel,
-  #searchToggleContainer {
-    z-index: 2000;
-    position: absolute;
-  }
-  #topLeftContainer {
-    top: 20px;
-    left: 20px;
-  }
-  #toggleRightPanel {
-    top: 20px;
-    right: 20px;
-  }
-  #searchToggleContainer {
-    top: 20px;
-    left: 70px;
-    display: flex;
-    align-items: center;
-  }
-  
-  /* ========================
+#topLeftContainer,
+#toggleRightPanel,
+#searchToggleContainer {
+  z-index: 2000;
+  position: absolute;
+}
+#topLeftContainer {
+  top: 20px;
+  left: 20px;
+}
+#toggleRightPanel {
+  top: 20px;
+  right: 20px;
+}
+#searchToggleContainer {
+  top: 19px;
+  left: 70px;
+  display: flex;
+  align-items: center;
+}
+
+/* ========================
      Search Bar
      ======================== */
-  #toggleSearchBar {
-    border-radius: 4px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-    padding: 8px 12px;
-    width: 40px;
-    height: 38px;
-    text-align: center;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-  #searchBar {
-    background: var(--light-bg);
-    border-radius: 4px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    padding: 5px;
-    margin-left: 8px;
-    height: 40px;
-    width: 0;
-    opacity: 0;
-    overflow: hidden;
-    transition: width var(--transition-speed), opacity var(--transition-speed);
-    display: flex;
-    align-items: center;
-  }
-  #searchBar input {
-    border: none;
-    outline: none;
-    width: 100%;
-    height: 100%;
-    font-size: 1rem;
-  }
-  #searchBar.open {
-    width: 250px;
-    opacity: 1;
-  }
-  
-  /* ========================
+#toggleSearchBar {
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  padding: 8px 12px;
+  width: 40px;
+  height: 38px;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+#searchBar {
+  background: var(--light-bg);
+  border-radius: 4px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  padding: 5px;
+  margin-left: 8px;
+  height: 40px;
+  width: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: width var(--transition-speed), opacity var(--transition-speed);
+  display: flex;
+  align-items: center;
+}
+#searchBar input {
+  border: none;
+  outline: none;
+  width: 100%;
+  height: 100%;
+  font-size: 1rem;
+}
+#searchBar.open {
+  width: 250px;
+  opacity: 1;
+}
+
+/* ========================
      Floating Panels
      ======================== */
-  .floating-tile {
-    background: var(--panel-bg);
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow-medium);
-    padding: 14px;
-    color: var(--primary-color);
-    font-size: 1rem;
-    transition: transform 0.4s ease, opacity 0.3s ease;
-  }
-  
-  /* Left Panel */
-  .panel-left {
-    position: absolute;
-    top: 60px;
-    left: 10px;
-    width: 280px;
-    max-height: 85vh;
-    overflow-y: auto;
-    transform: translateX(-110%);
-    z-index: 3000;
-    opacity: 0;
-    transition: transform 0.4s ease, opacity 0.3s ease;
-  }
-  .panel-left.open {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  
-  /* Right Panel */
-  .panel-right {
-    position: absolute;
-    top: 60px;
-    right: 10px;
-    width: 300px;
-    max-height: 85vh;
-    overflow-y: auto;
-    transform: translateX(110%);
-    z-index: 3000;
-    opacity: 0;
-    transition: transform 0.4s ease, opacity 0.3s ease;
-  }
-  .panel-right.open {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  
-  /* ========================
+.floating-tile {
+  background: var(--panel-bg);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-medium);
+  padding: 14px;
+  color: var(--primary-color);
+  font-size: 1rem;
+  transition: transform 0.4s ease, opacity 0.3s ease;
+}
+
+/* Left Panel */
+.panel-left {
+  position: absolute;
+  top: 60px;
+  left: 10px;
+  width: 280px;
+  max-height: 85vh;
+  overflow-y: auto;
+  transform: translateX(-110%);
+  z-index: 3000;
+  opacity: 0;
+  transition: transform 0.4s ease, opacity 0.3s ease;
+}
+.panel-left.open {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+/* Right Panel */
+.panel-right {
+  position: absolute;
+  top: 60px;
+  right: 10px;
+  width: 300px;
+  max-height: 85vh;
+  overflow-y: auto;
+  transform: translateX(110%);
+  z-index: 3000;
+  opacity: 0;
+  transition: transform 0.4s ease, opacity 0.3s ease;
+}
+.panel-right.open {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+/* ========================
      Close Button
      ======================== */
-  .close-btn {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: #ff4d4d;
-    border: none;
-    font-size: 1.2rem;
-    cursor: pointer;
-    color: #fff;
-    border-radius: 6px;
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background var(--transition-speed);
-  }
-  .close-btn:hover {
-    background: #cc0000;
-  }
-  
-  /* ========================
+.close-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #ff4d4d;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: #fff;
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-speed);
+}
+.close-btn:hover {
+  background: #cc0000;
+}
+
+/* ========================
      Panel Headers & Fields
      ======================== */
-  .panel-content h5 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #222;
-    margin-bottom: 12px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-    padding-bottom: 8px;
-  }
-  .panel-content .form-group {
-    margin-bottom: 12px;
-  }
-  .panel-content label {
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: var(--secondary-color);
-  }
-  .panel-content .form-control {
-    background: #f9f9f9;
-    border: 1px solid #ddd;
-    color: var(--primary-color);
-    font-size: 0.9rem;
-    padding: 6px 10px;
-    border-radius: 6px;
-  }
-  .panel-content select {
-    cursor: pointer;
-  }
-  
-  /* ========================
+.panel-content h5 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #222;
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  padding-bottom: 8px;
+}
+.panel-content .form-group {
+  margin-bottom: 12px;
+}
+.panel-content label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--secondary-color);
+}
+.panel-content .form-control {
+  background: #f9f9f9;
+  border: 1px solid #ddd;
+  color: var(--primary-color);
+  font-size: 0.9rem;
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+.panel-content select {
+  cursor: pointer;
+}
+
+/* ========================
      Buttons
      ======================== */
-  .panel-content .btn {
-    font-size: 0.9rem;
-    padding: 6px 12px;
-    border-radius: 6px;
-    font-weight: 500;
-    transition: all var(--transition-speed);
-  }
-  .panel-content .btn-danger {
-    background: #ff4444;
-    border: none;
-    color: #fff;
-  }
-  .panel-content .btn-danger:hover {
-    background: #cc0000;
-  }
-  .panel-content .btn-secondary {
-    background: #ddd;
-    border: none;
-    color: #000;
-  }
-  .panel-content .btn-secondary:hover {
-    background: #bbb;
-  }
-  
-  /* ========================
+.panel-content .btn {
+  font-size: 0.9rem;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all var(--transition-speed);
+}
+.panel-content .btn-danger {
+  background: #ff4444;
+  border: none;
+  color: #fff;
+}
+.panel-content .btn-danger:hover {
+  background: #cc0000;
+}
+.panel-content .btn-secondary {
+  background: #ddd;
+  border: none;
+  color: #000;
+}
+.panel-content .btn-secondary:hover {
+  background: #bbb;
+}
+
+/* ========================
      Modern Mosque Tile Redesign
      ======================== */
-  .mosque-tile {
-    background: var(--light-bg);
-    border-radius: var(--border-radius);
-    padding: 12px;
-    margin-bottom: 10px;
-    box-shadow: var(--shadow-light);
-    display: flex;
-    align-items: center;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
-  .mosque-tile:hover {
-    transform: scale(1.02);
-    box-shadow: var(--shadow-medium);
-  }
-  
-  /* Mosque Image */
-  .mosque-tile .mosque-image {
-    width: 60px;
-    height: 60px;
-    border-radius: 10px;
-    overflow: hidden;
-    margin-right: 12px;
-    border: 2px solid rgba(0, 0, 0, 0.1);
-    flex-shrink: 0;
-  }
-  .mosque-tile .mosque-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  
-  /* Mosque Details */
-  .mosque-tile .mosque-info {
-    flex: 1;
-  }
-  .mosque-tile .mosque-info h4 {
-    font-size: 1rem;
-    margin: 0;
-    font-weight: 600;
-    color: #222;
-  }
-  .mosque-tile .mosque-info p {
-    font-size: 0.85rem;
-    margin: 3px 0;
-    color: var(--secondary-color);
-  }
-  .mosque-tile .mosque-info a {
-    font-size: 0.85rem;
-    color: #ff4444;
-    font-weight: 500;
-    text-decoration: none;
-  }
-  .mosque-tile .mosque-info a:hover {
-    color: #cc0000;
-  }
-  .clearfix::after {
-    content: "";
-    display: table;
-    clear: both;
-  }
-  
-  /* ========================
+.mosque-tile {
+  background: var(--light-bg);
+  border-radius: var(--border-radius);
+  padding: 12px;
+  margin-bottom: 10px;
+  box-shadow: var(--shadow-light);
+  display: flex;
+  align-items: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.mosque-tile:hover {
+  transform: scale(1.02);
+  box-shadow: var(--shadow-medium);
+}
+
+/* Mosque Image */
+.mosque-tile .mosque-image {
+  width: 60px;
+  height: 60px;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-right: 12px;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
+}
+.mosque-tile .mosque-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Mosque Details */
+.mosque-tile .mosque-info {
+  flex: 1;
+}
+.mosque-tile .mosque-info h4 {
+  font-size: 1rem;
+  margin: 0;
+  font-weight: 600;
+  color: #222;
+}
+.mosque-tile .mosque-info p {
+  font-size: 0.85rem;
+  margin: 3px 0;
+  color: var(--secondary-color);
+}
+.mosque-tile .mosque-info a {
+  font-size: 0.85rem;
+  color: #ff4444;
+  font-weight: 500;
+  text-decoration: none;
+}
+.mosque-tile .mosque-info a:hover {
+  color: #cc0000;
+}
+.clearfix::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+/* ========================
      Leaflet Controls
      ======================== */
-  .leaflet-control-zoom,
-  .leaflet-control-fullscreen {
-    position: fixed !important;
-    z-index: 10000 !important;
-  }
-  .leaflet-control-zoom {
-    bottom: 60px !important;
-    right: 10px !important;
-  }
-  .leaflet-control-fullscreen {
-    bottom: 10px !important;
-    right: 10px !important;
-  }
-  
-  /* ========================
+.leaflet-control-zoom,
+.leaflet-control-fullscreen {
+  position: fixed !important;
+  z-index: 10000 !important;
+}
+.leaflet-control-zoom {
+  bottom: 60px !important;
+  right: 10px !important;
+}
+.leaflet-control-fullscreen {
+  bottom: 10px !important;
+  right: 10px !important;
+}
+
+/* ========================
      Custom Scrollbar in Panels
      ======================== */
-  .panel-left::-webkit-scrollbar,
-  .panel-right::-webkit-scrollbar {
-    width: 6px;
-  }
-  .panel-left::-webkit-scrollbar-track,
-  .panel-right::-webkit-scrollbar-track {
-    background: #f1f1f1;
-  }
-  .panel-left::-webkit-scrollbar-thumb,
-  .panel-right::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 3px;
-  }
-  
-  /* ========================
+.panel-left::-webkit-scrollbar,
+.panel-right::-webkit-scrollbar {
+  width: 6px;
+}
+.panel-left::-webkit-scrollbar-track,
+.panel-right::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+.panel-left::-webkit-scrollbar-thumb,
+.panel-right::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+/* ========================
      jQuery UI Autocomplete Suggestions
      ======================== */
-  .ui-autocomplete {
-    background: #fff;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    padding: 4px 0;
-    margin: 0;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    z-index: 4000 !important;
-    list-style: none;
-    font-size: 1rem;
-    max-width: 90vw;
-  }
-  .ui-autocomplete li {
-    padding: 4px 8px;
-    cursor: pointer;
-    border-bottom: 1px solid #eee;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .ui-autocomplete li:last-child {
-    border-bottom: none;
-  }
-  .ui-autocomplete li:hover,
-  .ui-autocomplete li.ui-state-focus {
-    background-color: #f0f0f0;
-  }
-  
-  /* ========================
+.ui-autocomplete {
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 4px 0;
+  margin: 0;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  z-index: 4000 !important;
+  list-style: none;
+  font-size: 1rem;
+  max-width: 90vw;
+}
+.ui-autocomplete li {
+  padding: 4px 8px;
+  cursor: pointer;
+  border-bottom: 1px solid #eee;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ui-autocomplete li:last-child {
+  border-bottom: none;
+}
+.ui-autocomplete li:hover,
+.ui-autocomplete li.ui-state-focus {
+  background-color: #f0f0f0;
+}
+
+/* ========================
      Responsive & Mobile Enhancements
      ======================== */
-  @media (max-width: 768px) {
-    /* Adjust top panel toggles */
-    #topLeftContainer {
-      top: 10px;
-      left: 10px;
-    }
-    #toggleRightPanel {
-      top: 10px;
-      right: 10px;
-    }
-    #searchToggleContainer {
-      top: 60px;
-      left: 10px;
-    }
-  
-    /* Panels */
-    .panel-left,
-    .panel-right {
-      width: 90%;
-      left: 5%;
-      right: 5%;
-      max-height: 70vh;
-    }
-  
-    /* Modern Mosque Tiles - More Compact on Mobile */
-    .mosque-tile {
-      flex-direction: row;
-      padding: 10px;
-    }
-    .mosque-tile .mosque-image {
-      width: 50px;
-      height: 50px;
-      margin-right: 8px;
-    }
-    .mosque-tile .mosque-info h4 {
-      font-size: 0.95rem;
-    }
-    .mosque-tile .mosque-info p,
-    .mosque-tile .mosque-info a {
-      font-size: 0.8rem;
-    }
+@media (max-width: 768px) {
+  /* Adjust top panel toggles */
+  #topLeftContainer {
+    top: 10px;
+    left: 10px;
   }
-  
-  /* ========================
+  #toggleRightPanel {
+    top: 10px;
+    right: 10px;
+  }
+  #searchToggleContainer {
+    top: 60px;
+    left: 10px;
+  }
+
+  /* Panels */
+  .panel-left,
+  .panel-right {
+    width: 90%;
+    left: 5%;
+    right: 5%;
+    max-height: 70vh;
+  }
+
+  /* Modern Mosque Tiles - More Compact on Mobile */
+  .mosque-tile {
+    flex-direction: row;
+    padding: 10px;
+  }
+  .mosque-tile .mosque-image {
+    width: 50px;
+    height: 50px;
+    margin-right: 8px;
+  }
+  .mosque-tile .mosque-info h4 {
+    font-size: 0.95rem;
+  }
+  .mosque-tile .mosque-info p,
+  .mosque-tile .mosque-info a {
+    font-size: 0.8rem;
+  }
+}
+
+/* ========================
      Form Elements (Select2 and Inputs)
      ======================== */
-  .select2-dropdown {
-    z-index: 4001 !important;
-    font-size: 16px;
-  }
-  .select2-container {
-    z-index: 4000 !important;
-  }
-  .select2-container .select2-selection--multiple {
-    box-sizing: border-box;
-    cursor: pointer;
-    display: block;
-    min-height: 32px;
-    user-select: none;
-    -webkit-user-select: none;
-    font-size: 16px;
-  }
-  .select2-container .select2-selection--single .select2-selection__rendered {
-    display: block;
-    padding-left: 8px;
-    padding-right: 20px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 16px;
-  }
-  .form-control-sm {
-    height: calc(1.5em + .5rem + 2px);
-    padding: .25rem .5rem;
-    font-size: 16px;
-    line-height: 1.5;
-    border-radius: .2rem;
-  }
-  
+.select2-dropdown {
+  z-index: 4001 !important;
+  font-size: 16px;
+}
+.select2-container {
+  z-index: 4000 !important;
+}
+.select2-container .select2-selection--multiple {
+  box-sizing: border-box;
+  cursor: pointer;
+  display: block;
+  min-height: 32px;
+  user-select: none;
+  -webkit-user-select: none;
+  font-size: 16px;
+}
+.select2-container .select2-selection--single .select2-selection__rendered {
+  display: block;
+  padding-left: 8px;
+  padding-right: 20px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 16px;
+}
+.form-control-sm {
+  height: calc(1.5em + 0.5rem + 2px);
+  padding: 0.25rem 0.5rem;
+  font-size: 16px;
+  line-height: 1.5;
+  border-radius: 0.2rem;
+}
