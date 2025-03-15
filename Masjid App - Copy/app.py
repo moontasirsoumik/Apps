@@ -3,104 +3,155 @@ import folium
 from folium.plugins import MarkerCluster, Fullscreen
 from geopy.distance import geodesic
 import requests
+from geopy.geocoders import Nominatim
+import math
+import json
+import os
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key"  # Replace with a strong secret in production
 
-# --- MOSQUE DATA ---
-mosques = {
-    "Bangladesh Islamic Cultural Center (BICC)": {
-        "type": "Mosque",
-        "coords": [60.250280726774456, 25.01109832122293],
-        "description": "A vibrant center offering cultural and religious services.",
-        "image": "images/image.png",  # Relative to static folder
-        "maps_link": "https://maps.app.goo.gl/3vZq9vhDUWvVDnL1A"
-    },
-    "Masjid Al-Huda (Helsinki Islamic Center)": {
-        "type": "Mosque",
-        "coords": [60.199935497835995, 24.937680503497916],
-        "description": "A welcoming place for community prayer and events.",
-        "image": "images/image.png",
-        "maps_link": "https://maps.app.goo.gl/hQVKt31t9xCwzDzFA"
-    },
-    "Hidaya Mosque": {
-        "type": "Mosque",
-        "coords": [60.24910140156021, 25.008836640940803],
-        "description": "An important hub for spiritual guidance and community support.",
-        "image": "images/image.png",
-        "maps_link": "https://maps.app.goo.gl/4pksAR6XZzc5nZ3e7"
-    },
-    "Al-Iman Mosque": {
-        "type": "Mosque",
-        "coords": [60.196677300959216, 24.882916721221132],
-        "description": "Known for its serene environment and educational programs.",
-        "image": "images/image.png",
-        "maps_link": "https://maps.app.goo.gl/yAHGFfznsHdJ9pez9"
-    },
-    "Ummah Moskeija": {
-        "type": "Mosque",
-        "coords": [60.223381342923645, 24.993431115463885],
-        "description": "A modern space offering prayer services and community events.",
-        "image": "images/image.png",
-        "maps_link": "https://maps.app.goo.gl/JVAGcGj1xbizgYds5"
-    },
-    "Suomen Islamilainen Yhdyskunta": {
-        "type": "Mosque",
-        "coords": [60.16466031795139, 24.93424255135939],
-        "description": "Fostering interfaith dialogue and community service.",
-        "image": "images/image.png",
-        "maps_link": "https://maps.app.goo.gl/QkDCeh2kVQPwp96P7"
-    },
-    "Bangladesh Kendrio Masjid": {
-        "type": "Mosque",
-        "coords": [60.21046822195977, 25.05075871552435],
-        "description": "A center that caters to the diverse needs of the community.",
-        "image": "images/image.png",
-        "maps_link": "https://maps.app.goo.gl/SaUjg4tqC2qYFZMp6"
-    }
-}
+# Initialize a geolocator for reverse geocoding
+geolocator = Nominatim(user_agent="my_app")
+
+# --- LOAD MOSQUE DATA FROM JSON FILE ---
+mosque_file = "mosques.json"
+
+with open(mosque_file, "r", encoding="utf-8") as f:
+    mosques = json.load(f)
+
+# For each mosque, if there is no "location" field or its value is None/empty, fetch the address and update.
+updated = False
+for name, data in mosques.items():
+    if not data.get("location"):  # Check if location field is missing or empty
+        try:
+            # Use the coords field to perform reverse geocoding
+            address = geolocator.reverse(data["coords"], language="en").address
+        except Exception as e:
+            print(f"Error getting address for {name}: {e}")
+            address = "No address found"
+        data["location"] = address
+        updated = True  # Mark that we made a change
+
+# If we updated any mosque entries, write them back to the file.
+if updated:
+    with open(mosque_file, "w", encoding="utf-8") as f:
+        json.dump(mosques, f, ensure_ascii=False, indent=4)
+    print("mosque.json file updated with location data.")
+
+def bounding_box(lat, lon, dist_km=3.0):
+    d_lat = dist_km / 111.0
+    d_lon = dist_km / (111.0 * math.cos(math.radians(lat)))
+    return (lat - d_lat, lon - d_lon, lat + d_lat, lon + d_lon)
 
 def create_map(user_location, tile_choice, filtered_mosques, distances, route=None, target_mosque=None):
-    map_center = [60.1699, 24.9384]
-    m = folium.Map(location=map_center, zoom_start=12, control_scale=True, tiles=tile_choice)
+    minLat, minLon, maxLat, maxLon = bounding_box(user_location[0], user_location[1], 3)
+    m = folium.Map(
+        location=user_location,
+        zoom_start=13,
+        control_scale=True,
+        tiles=tile_choice,
+        width="100%",
+        height="100%",
+    )
     Fullscreen().add_to(m)
     marker_cluster = MarkerCluster().add_to(m)
-    
+
     for name, data in filtered_mosques.items():
-        directions_url = f"https://www.google.com/maps/dir/?api=1&origin={user_location[0]},{user_location[1]}&destination={data['coords'][0]},{data['coords'][1]}"
-        view_url = f"https://www.google.com/maps/search/?api=1&query={data['coords'][0]},{data['coords'][1]}"
-        popup_html = f'''
-        <div style="width:260px; font-family: 'Roboto', sans-serif; font-size: 0.85rem; color: #333;">
-            <div style="padding:10px; border-radius:6px; background:#fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <h4 style="margin:0 0 5px; font-size:1rem; font-weight:500; color:#333;">{name}</h4>
-                <p style="margin:0; color:#555;">{data["description"]}</p>
-                <p style="margin:5px 0 10px; color:#777;">Distance: {distances[name]:.2f} km</p>
-                <div style="display:flex; justify-content:space-between;">
-                    <a href="{directions_url}" target="_blank" style="text-decoration:none; font-size:0.8rem; color:#d9534f;">Directions</a>
-                    <a href="{view_url}" target="_blank" style="text-decoration:none; font-size:0.8rem; color:#d9534f;">View</a>
-                </div>
+        location_address = data.get("location", "No address found")
+        popup_html = f"""
+            <strong style="font-size: 1rem; color: #333; font-family: 'Roboto', sans-serif;">
+                {name}
+            </strong><br>
+            <span style="font-size: 1rem; color: #555; font-family: 'Roboto', sans-serif;">
+                {location_address}
+            </span><br>
+            <strong style="font-size: 1rem; color: #007bff; font-family: 'Roboto', sans-serif; display: block; margin-top: 6px;">
+                {distances.get(name, 0):.2f} km away
+            </strong>
+            <div style="display: flex; gap: 8px; justify-content: center; margin-top: 6px;">
+                <a href="https://www.google.com/maps/dir/?api=1&origin={user_location[0]},{user_location[1]}&destination={data['coords'][0]},{data['coords'][1]}" 
+                   target="_blank" 
+                   style="background: #007bff; color: #fff; font-size: 1rem; padding: 6px 8px; border-radius: 4px; text-decoration: none; font-family: 'Roboto', sans-serif; display: inline-block;">
+                    Get Direction <i class="fas fa-external-link-alt" style="font-size: 0.9rem;"></i>
+                </a>
+                <a href="https://www.google.com/maps/search/?api=1&query={data['coords'][0]},{data['coords'][1]}" 
+                   target="_blank" 
+                   style="background: #28a745; color: #fff; font-size: 1rem; padding: 6px 8px; border-radius: 4px; text-decoration: none; font-family: 'Roboto', sans-serif; display: inline-block;">
+                    Open in GMaps <i class="fas fa-external-link-alt" style="font-size: 0.9rem;"></i>
+                </a>
             </div>
-        </div>
-        '''
+        """
         folium.Marker(
             location=data["coords"],
-            popup=popup_html,
             tooltip=name,
-            icon=folium.Icon(color='blue', icon='info-sign')
+            popup=folium.Popup(popup_html, max_width=180),
+            icon=folium.Icon(color="blue", icon="info-sign"),
         ).add_to(marker_cluster)
-    
+
+    try:
+        user_address = geolocator.reverse(user_location, language="en").address
+    except:
+        user_address = "Your current location"
+    user_popup_html = f"""
+        <strong style="font-size: 1rem; color: #333; font-family: 'Roboto', sans-serif;">
+            Your Location
+        </strong><br>
+        <span style="font-size: 1rem; color: #555; font-family: 'Roboto', sans-serif;">
+            {user_address}
+        </span>
+    """
     folium.Marker(
         location=user_location,
         tooltip="Your Location",
-        icon=folium.Icon(color="green", icon="user")
+        popup=folium.Popup(user_popup_html, max_width=200),
+        icon=folium.Icon(color="green", icon="user"),
     ).add_to(m)
-    
+
     if route and target_mosque:
+        # Use weight=4 as in your working instance
         folium.PolyLine(route, color="blue", weight=4, opacity=0.7).add_to(m)
+
+    bounding_box_script = f"""
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {{
+        let mapEle = document.querySelector('.folium-map');
+        if (mapEle && mapEle.__folium_map) {{
+            let mapObj = mapEle.__folium_map;
+            let minLat = {minLat};
+            let minLon = {minLon};
+            let maxLat = {maxLat};
+            let maxLon = {maxLon};
+            let bounds = L.latLngBounds([[minLat, minLon], [maxLat, maxLon]]);
+            mapObj.fitBounds(bounds);
+            mapObj.setMaxBounds(bounds);
+            mapObj.options.maxBoundsViscosity = 1.0;
+            let currentZoom = mapObj.getZoom();
+            mapObj.setMinZoom(currentZoom);
+        }}
+    }});
+    </script>
+    """
+    m.get_root().html.add_child(folium.Element(bounding_box_script))
+    map_script_zoom_control = """
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      var bottomRight = document.querySelector("div.leaflet-bottom.leaflet-right");
+      var zoomControl = document.querySelector("div.leaflet-control-zoom");
+      var attributionControl = document.querySelector("div.leaflet-control-attribution");
+      if (bottomRight && zoomControl && attributionControl) {
+        bottomRight.insertBefore(zoomControl, attributionControl);
+        zoomControl.style.right = "20px";
+      }
+    });
+    </script>
+    """
+    m.get_root().html.add_child(folium.Element(map_script_zoom_control))
     return m
 
 @app.route("/", methods=["GET", "POST"])
 def index():
+    # Default values
     user_lat = 60.1699
     user_lon = 24.9384
     tile_choice = "OpenStreetMap"
@@ -108,10 +159,13 @@ def index():
     filter_types = ["Mosque", "Multi Faith Room", "Suggested Place"]
     action = None
 
+    if request.method == "GET":
+        session["action"] = None
+
     if request.method == "POST":
         try:
-            user_lat = float(request.form.get("latitude", 60.1699))
-            user_lon = float(request.form.get("longitude", 24.9384))
+            user_lat = float(request.form.get("latitude", user_lat))
+            user_lon = float(request.form.get("longitude", user_lon))
         except:
             user_lat, user_lon = 60.1699, 24.9384
         tile_choice = request.form.get("tile_choice", "OpenStreetMap")
@@ -132,29 +186,47 @@ def index():
         selected_mosque = session.get("selected_mosque", selected_mosque)
         filter_types = session.get("filter_types", filter_types)
         action = session.get("action", None)
-    
+
     user_location = [user_lat, user_lon]
     filtered_mosques = {name: data for name, data in mosques.items() if data["type"] in filter_types}
     distances = {name: geodesic(user_location, data["coords"]).km for name, data in filtered_mosques.items()}
 
-    if selected_mosque == "None":
-        chosen_mosque = min(distances, key=distances.get) if distances else None
-        chosen_distance = distances[chosen_mosque] if chosen_mosque else None
+    if filtered_mosques:
+        if selected_mosque == "None":
+            chosen_mosque = min(distances, key=distances.get) if distances else None
+            chosen_distance = distances[chosen_mosque] if chosen_mosque else None
+        else:
+            chosen_mosque = selected_mosque
+            chosen_distance = distances.get(chosen_mosque, None)
     else:
-        chosen_mosque = selected_mosque
-        chosen_distance = distances.get(chosen_mosque, None)
+        chosen_mosque = None
+        chosen_distance = None
 
+    # Get Direction: Fetch route from OSRM using the working instance logic
     route = None
     if action == "get_direction" and chosen_mosque:
         data = filtered_mosques[chosen_mosque]
+        # OSRM expects coordinates in lon,lat format; our mosque coords are [lat, lon]
         start_lon, start_lat = user_lon, user_lat
         end_lon, end_lat = data["coords"][1], data["coords"][0]
-        osrm_url = f"http://router.project-osrm.org/route/v1/driving/{start_lon},{start_lat};{end_lon},{end_lat}?overview=full&geometries=geojson"
+        # Use HTTP as in your old instance
+        osrm_url = (
+            f"http://router.project-osrm.org/route/v1/driving/"
+            f"{start_lon},{start_lat};{end_lon},{end_lat}?overview=full&geometries=geojson"
+        )
+        print(f"OSRM API Request: {osrm_url}")  # Debugging
         response = requests.get(osrm_url)
         if response.status_code == 200:
-            route_data = response.json()["routes"][0]["geometry"]["coordinates"]
-            route = [[coord[1], coord[0]] for coord in route_data]
+            try:
+                route_data = response.json()["routes"][0]["geometry"]["coordinates"]
+                # Convert coordinates from [lon, lat] to [lat, lon]
+                route = [[coord[1], coord[0]] for coord in route_data]
+                print("Route fetched successfully.")
+            except Exception as e:
+                print(f"Error parsing OSRM response: {e}")
+                route = None
         else:
+            print(f"OSRM request failed with status code {response.status_code}")
             route = None
 
     folium_map = create_map(user_location, tile_choice, filtered_mosques, distances, route, chosen_mosque)
@@ -167,8 +239,8 @@ def index():
         sorted_mosques = sorted(filtered_mosques.items(), key=lambda x: distances[x[0]])
         for name, data in sorted_mosques:
             dist_km = distances[name]
-            image_url = url_for('static', filename=data["image"])
-            mosque_cards += f'''
+            image_url = data["image"]
+            mosque_cards += f"""
             <div class="mosque-tile clearfix">
                 <div class="mosque-info">
                     <h4>{name}</h4>
@@ -185,21 +257,23 @@ def index():
                     </div>
                 </div>
             </div>
-            '''
+            """
     mosque_options = sorted(filtered_mosques.keys())
 
-    return render_template("index.html",
-                           map_html=map_html,
-                           mosque_cards=mosque_cards,
-                           user_lat=user_lat,
-                           user_lon=user_lon,
-                           tile_choice=tile_choice,
-                           selected_mosque=selected_mosque,
-                           filter_types=filter_types,
-                           chosen_mosque=chosen_mosque,
-                           chosen_distance=chosen_distance,
-                           mosque_options=mosque_options,
-                           mosques=mosques)
+    return render_template(
+        "index.html",
+        map_html=map_html,
+        mosque_cards=mosque_cards,
+        user_lat=user_lat,
+        user_lon=user_lon,
+        tile_choice=tile_choice,
+        selected_mosque=selected_mosque,
+        filter_types=filter_types,
+        chosen_mosque=chosen_mosque,
+        chosen_distance=chosen_distance,
+        mosque_options=mosque_options,
+        mosques=mosques,
+    )
 
 if __name__ == "__main__":
     app.run(debug=True)

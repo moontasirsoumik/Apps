@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Helsinki Mosques Finder</title>
+  <title>Helsinki Mosque Finder</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- Fonts & Libraries -->
@@ -48,10 +48,13 @@
           <label for="tile_choice" class="small">Map Style</label>
           <select class="form-control form-control-sm" id="tile_choice" name="tile_choice">
             <option value="OpenStreetMap" {% if tile_choice=='OpenStreetMap' %}selected{% endif %}>OpenStreetMap</option>
+            <option value="CartoDB voyager" {% if tile_choice=='CartoDB voyager' %}selected{% endif %}>CartoDB Voyager</option>
             <option value="CartoDB positron" {% if tile_choice=='CartoDB positron' %}selected{% endif %}>CartoDB Positron</option>
             <option value="CartoDB dark_matter" {% if tile_choice=='CartoDB dark_matter' %}selected{% endif %}>CartoDB Dark Matter</option>
+            <option value="OSM Bright" {% if tile_choice=='OSM Bright' %}selected{% endif %}>OSM Bright</option>
           </select>
         </div>
+
 
         <!-- User Location -->
         <div class="form-group mb-2">
@@ -103,8 +106,8 @@
       <h6 class="mt-3">
         {% if selected_mosque=='None' %}Closest Mosque{% else %}Selected Mosque{% endif %}
       </h6>
-      <p class="small">
-        <strong>{{ chosen_mosque }}</strong> – <strong>{{ chosen_distance|round(2) }} km</strong>
+      <p>
+        <span>{{ chosen_mosque }}</strong> – <strong>{{ chosen_distance|round(2) }} km</span>
       </p>
       {% endif %}
     </div>

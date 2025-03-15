@@ -8,7 +8,7 @@
         "description": "A vibrant center offering cultural and religious services.",
         "image": "https://via.placeholder.com/120?text=BICC",
         "maps_link": "https://maps.app.goo.gl/3vZq9vhDUWvVDnL1A",
-        "location": "Helsinki AF"
+        "address": "P1, 2, Pikkalankatu, Ala-Malmi, Malmi, Northeastern major district, Helsinki, Helsinki sub-region, Uusimaa, Mainland Finland, 00700, Finland"
     },
     "Masjid Al-Huda (Helsinki Islamic Center)": {
         "type": "Mosque",
@@ -19,7 +19,8 @@
         "description": "A welcoming place for community prayer and events.",
         "image": "https://via.placeholder.com/120?text=Al-Huda",
         "maps_link": "https://maps.app.goo.gl/hQVKt31t9xCwzDzFA",
-        "location": "Helsinki AF"
+        "short description": "Here's a shorty",
+        "address": "2, Veturitori, Itä-Pasila, Pasila, Central major district, Helsinki, Helsinki sub-region, Uusimaa, Mainland Finland, 00077, Finland"
     },
     "Hidaya Mosque": {
         "type": "Mosque",
@@ -30,7 +31,7 @@
         "description": "An important hub for spiritual guidance and community support.",
         "image": "https://via.placeholder.com/120?text=Hidaya",
         "maps_link": "https://maps.app.goo.gl/4pksAR6XZzc5nZ3e7",
-        "location": "Helsinki AF"
+        "address": "5, Malminkaari, Ala-Malmi, Malmi, Northeastern major district, Helsinki, Helsinki sub-region, Uusimaa, Mainland Finland, 00700, Finland"
     },
     "Al-Iman Mosque": {
         "type": "Mosque",
@@ -41,7 +42,7 @@
         "description": "Known for its serene environment and educational programs.",
         "image": "https://via.placeholder.com/120?text=Al-Iman",
         "maps_link": "https://maps.app.goo.gl/yAHGFfznsHdJ9pez9",
-        "location": "Helsinki AF"
+        "address": "4a, Munkkiniemen puistotie, Vanha Munkkiniemi, Munkkiniemi, Western major district, Helsinki, Helsinki sub-region, Uusimaa, Mainland Finland, 00330, Finland"
     },
     "Ummah Moskeija": {
         "type": "Mosque",
@@ -52,7 +53,7 @@
         "description": "A modern space offering prayer services and community events.",
         "image": "https://via.placeholder.com/120?text=Ummah",
         "maps_link": "https://maps.app.goo.gl/JVAGcGj1xbizgYds5",
-        "location": "Helsinki AF"
+        "address": "6, Hernepellonkuja, Viikinranta, Viikki, Northeastern major district, Helsinki, Helsinki sub-region, Uusimaa, Mainland Finland, 00710, Finland"
     },
     "Suomen Islamilainen Yhdyskunta": {
         "type": "Mosque",
@@ -63,7 +64,8 @@
         "description": "Fostering interfaith dialogue and community service.",
         "image": "https://via.placeholder.com/120?text=Yhdyskunta",
         "maps_link": "https://maps.app.goo.gl/QkDCeh2kVQPwp96P7",
-        "location": "Helsinki AF"
+        "short description": "Here's a shorty",
+        "address": "Lidl, 20, Lönnrotinkatu, Kamppi, Southern major district, Helsinki, Helsinki sub-region, Uusimaa, Mainland Finland, 00100, Finland"
     },
     "Bangladesh Kendrio Masjid": {
         "type": "Mosque",
@@ -74,6 +76,6 @@
         "description": "A center that caters to the diverse needs of the community.",
         "image": "https://via.placeholder.com/120?text=Kendrio",
         "maps_link": "https://maps.app.goo.gl/SaUjg4tqC2qYFZMp6",
-        "location": "Helsinki AF"
+        "address": "11, Laippatie, Roihupelto, Vartiokylä, Eastern major district, Helsinki, Helsinki sub-region, Uusimaa, Mainland Finland, 00800, Finland"
     }
 }
