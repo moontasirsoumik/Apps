@@ -259,12 +259,25 @@ def update():
             image = data.get("image", "placeholder.jpg")
             image_url = url_for("static", filename=image)
             mosque_cards += f"""
-            <div style="border:1px solid #ddd; margin-bottom:10px; padding:10px;">
-                <strong>{name}</strong> - {dist_km:.2f} km
-                <p>{short_desc if short_desc else desc}</p>
-                <img src="{image_url}" alt="{name}" style="width:80px; height:80px; object-fit:cover;">
-            </div>
-            """
+             <div class="mosque-tile clearfix" style="border: 1px solid #ddd; border-radius: 6px; padding: 10px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                 <div class="mosque-image" style="width: 60px; height: 60px; border-radius: 6px; overflow: hidden; margin-right: 10px; flex-shrink: 0;">
+                     <img src="{image_url}" alt="{name}" style="width: 100%; height: 100%; object-fit: cover;">
+                 </div>
+                 <div class="mosque-info" style="flex: 1;">
+                     <h4 style="margin: 0; font-size: 1rem; font-weight: 600; color: #333;">{name}</h4>
+                     {f'<p style="margin: 2px 0; font-size: 0.85rem; color: #555;">{short_desc}</p>' if short_desc else ""}
+                     <p style="margin: 2px 0; font-size: 0.8rem; color: #777;">{description}</p>
+                     <p style="margin: 2px 0; font-size: 0.8rem; color: #007bff;"><strong>{dist_km:.2f} km</strong></p>
+                     <div style="margin-top: 4px;">
+                         <a href="https://www.google.com/maps/dir/?api=1&origin={user_lat},{user_lon}&destination={data["coords"][0]},{data["coords"][1]}" 
+                            target="_blank" style="text-decoration: none; font-size: 0.8rem; color: #007bff;">Directions</a>
+                         |
+                         <a href="https://www.google.com/maps/search/?api=1&query={data["coords"][0]},{data["coords"][1]}" 
+                            target="_blank" style="text-decoration: none; font-size: 0.8rem; color: #28a745;">View</a>
+                     </div>
+                 </div>
+             </div>
+             """
 
     chosen_info = ""
     if chosen_mosque:
