@@ -1,0 +1,210 @@
+<!-- index.html -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EPassi Optimizer</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="shell topbar__inner">
+          <div class="topbar__left">
+            <div class="logo" aria-hidden="true">E</div>
+            <div class="topbar__titles">
+              <h1 class="topbar__title">
+                <span class="epassi-logo">EPassi</span> Lunch Optimizer
+              </h1>
+              <div class="topbar__subtitle">Optimize taps & payments</div>
+            </div>
+          </div>
+
+          <div class="topbar__right" title="Ready">
+            <span class="status-dot" aria-hidden="true"></span>
+            <span class="status-text">Ready</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="topbar-spacer" aria-hidden="true"></div>
+
+      <main class="shell main">
+        <section class="grid grid--solo" id="app-grid">
+          <section class="left" id="left-col">
+            <section class="card card--inputs" id="inputs-card">
+              <div class="card__header">
+                <h2 class="card__title">Inputs</h2>
+                <p class="card__hint">Enter meal total and remaining limits.</p>
+              </div>
+
+              <div class="card__body">
+                <form
+                  class="form"
+                  id="optimizer-form"
+                  autocomplete="off"
+                  onsubmit="return false;"
+                >
+                  <div class="form__grid">
+                    <div class="field">
+                      <label for="meal-total">Meal total (€) *</label>
+                      <div class="control">
+                        <input
+                          type="number"
+                          id="meal-total"
+                          step="0.01"
+                          placeholder="e.g. 23.50"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div class="field">
+                      <label for="remaining-benefit"
+                        >Remaining EPassi benefit (€)</label
+                      >
+                      <div class="control">
+                        <input
+                          type="number"
+                          id="remaining-benefit"
+                          step="0.01"
+                          min="0"
+                          placeholder="e.g. 280"
+                        />
+                      </div>
+                    </div>
+
+                    <div class="field field--full">
+                      <label for="remaining-taps">Remaining EPassi taps</label>
+                      <div class="control">
+                        <input
+                          type="number"
+                          id="remaining-taps"
+                          min="0"
+                          step="1"
+                          placeholder="e.g. 20"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="form__footer">
+                    <div class="form__tip">
+                      Optimizes taps in €0.10 steps between €8.90 and €14.00.
+                    </div>
+                    <button
+                      id="optimize-btn"
+                      class="btn btn--primary"
+                      type="button"
+                    >
+                      Optimize
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </section>
+
+            <section
+              class="card card--plan"
+              id="results-section"
+              style="display: none"
+            >
+              <div class="card__header">
+                <h2 class="card__title">Payment plan</h2>
+                <p class="card__hint">Summary of the optimal split.</p>
+              </div>
+
+              <div class="card__body">
+                <div class="summary">
+                  <div class="summary-grid" id="plan-summary"></div>
+                </div>
+
+                <div class="actions">
+                  <button
+                    id="reset-done"
+                    class="btn btn--ghost"
+                    type="button"
+                    style="display: none"
+                  >
+                    Reset done
+                  </button>
+                  <button id="clear-plan" class="btn btn--ghost" type="button">
+                    Clear plan
+                  </button>
+                </div>
+              </div>
+            </section>
+          </section>
+
+          <section class="right" id="right-col">
+            <section
+              class="card card--steps"
+              id="payment-taps-section"
+              style="display: none"
+            >
+              <div class="card__header">
+                <h2 class="card__title">Payment steps</h2>
+                <p class="card__hint">
+                  Tap a row when completed — done moves to the bottom.
+                </p>
+              </div>
+
+              <div class="card__body card__body--steps" id="steps-body">
+                <div class="steps" id="payment-plan"></div>
+              </div>
+            </section>
+          </section>
+        </section>
+
+        <footer class="footer">
+        </footer>
+      </main>
+    </div>
+
+    <template id="tpl-summary-card">
+      <div class="summary-card">
+        <div class="summary-card__label"></div>
+        <div class="summary-card__value"></div>
+        <div class="summary-card__sub"></div>
+      </div>
+    </template>
+
+    <template id="tpl-step-epassi">
+      <div class="step-card step-card--epassi" role="button" tabindex="0">
+        <div class="step-card__main">
+          <div class="step-card__label"></div>
+          <div class="step-card__amount"></div>
+          <div class="step-chips">
+            <span class="chip chip--company"></span>
+            <span class="chip chip--salary"></span>
+          </div>
+        </div>
+        <span class="step-card__badge">Done</span>
+      </div>
+    </template>
+
+    <template id="tpl-step-personal">
+      <div class="step-card step-card--personal" role="button" tabindex="0">
+        <div class="step-card__main">
+          <div class="step-card__label"></div>
+          <div class="step-card__amount"></div>
+          <div class="step-chips">
+            <span class="chip chip--plain"></span>
+          </div>
+        </div>
+        <span class="step-card__badge">Done</span>
+      </div>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>
