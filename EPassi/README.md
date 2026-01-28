@@ -1,65 +1,110 @@
 # EPassi Lunch Payment Optimizer
 
-A responsive single-page web app that helps you split a lunch payment into the best set of EPassi taps (and any remainder on your personal card) to maximize the employer contribution while respecting EPassi tap rules and your remaining limits.
+A responsive single-page web app that optimizes how you split a lunch payment into the best set of EPassi taps plus any remainder on your personal card. It maximizes your employer's contribution while respecting EPassi rules and your remaining limits.
 
 ## What it does
 
-You enter:
+**Input:**
+- **Meal total (€)** *(required)* — the amount you need to pay
+- **Remaining EPassi benefit (€)** *(optional)* — your available EPassi balance; defaults to €294 if empty
+- **Remaining EPassi taps** *(optional)* — the number of taps you have left
 
-* **Meal total (€)** (required)
-* **Remaining EPassi benefit (€)** (optional; defaults to **€294** if empty)
-* **Remaining EPassi taps** (optional)
+**Output:**
+- **Payment plan summary** — company contribution, salary deduction, personal card amount, taps used
+- **Optional remaining cards** — remaining balance and remaining taps (shown only if you provide both limits)
+- **Payment steps list** — clickable cards for each EPassi tap and personal card payment; mark each **Done** as you complete it
 
-Then the app generates:
+## How the algorithm works
 
-* A **Payment plan summary** (company contribution, salary deduction, personal card, taps used)
-* Optional **Remaining after this** cards (remaining balance + remaining taps) if both limits were provided
-* A **Payment steps** list as tappable cards you can mark **Done** (done items move to the bottom)
+The app uses **dynamic programming** to find the globally optimal payment plan:
+
+1. **Valid tap values** are €8.90 to €14.00 in €0.10 increments (51 options: 890, 900, 910, ..., 1400 cents)
+2. **Benefit calculation** per tap:
+   - If tap ≥ €11.50: company pays 25% (rounded down), you pay the rest via salary deduction
+   - If tap < €11.50: company pays €8.80, you pay the rest via salary deduction (if positive)
+3. **Algorithm:**
+   - Build a DP table where `dp[s]` = best plan to spend exactly `s` cents on EPassi
+   - For each spending amount, try all valid tap values and keep the best result
+   - Explore all achievable spend totals and their corresponding personal card remainders
+   - Select the globally best plan across all options
+
+4. **Optimization criteria** (in order):
+   - **Maximize company contribution** (most important)
+   - If tied: **minimize salary deduction**
+   - If tied: **minimize number of taps**
+   - If tied: **minimize personal card amount**
+
+5. **Consolidation rule:**
+   - If the result includes a tiny personal card charge (<€0.14) and an EPassi tap under €14.00, the app automatically merges the personal amount into that tap to eliminate absurd micro-payments
+
+**Result:** The algorithm guarantees the best possible financial outcome for you.
 
 ## Rules and constraints
 
-* Valid tap values are generated in **€0.10 increments** from **€8.90 to €14.00**
-* Total EPassi spend cannot exceed **min(meal total, remaining benefit)**
-* If you provide remaining taps, the plan will use **no more than that number of taps**
-* Any leftover meal amount is paid using a **personal card**
-* Remaining balance and remaining taps are **never shown as negative** (clamped to 0)
-
-## How optimization works
-
-The optimizer searches all valid tap combinations (within the limits) and picks the best plan using this priority:
-
-1. **Maximize total company contribution**
-2. If tied: **minimize total salary deduction**
-3. If tied: **minimize number of taps**
-4. If tied: **minimize personal card remainder**
-
-It uses **dynamic programming** to guarantee the globally best result under the constraints.
+- Valid tap range: **€8.90 to €14.00** in **€0.10 increments** (51 possible values)
+- Total EPassi spend ≤ **min(meal total, remaining benefit)**
+- Number of taps ≤ **remaining taps** (if provided)
+- Any unspent meal amount must be covered by **personal card**
+- Remaining balance and taps are **never shown as negative** (clamped to ≥ 0)
 
 ## UI behavior
 
-* **Desktop layout:** Inputs + Plan on the left, Steps on the right
-  The **Steps card matches the combined height** of Inputs + Plan (Steps scrolls internally only when needed on desktop).
-* **Mobile layout:** Sections stack vertically; **only the page scrolls**.
-* Tap any step card to mark it **Done** → it fades and moves to the bottom.
-* **Reset done** appears only after at least one step is marked done.
-* **Clear plan** clears the current plan and returns to the initial state.
+### Desktop (≥981px)
+- **Left column:** Inputs card + Payment plan card
+- **Right column:** Payment steps card (synchronized height with left column, scrolls internally)
+- Sticky topbar stays visible while scrolling content
+
+### Mobile (<981px)
+- Sections stack vertically
+- Page scrolls normally; topbar remains sticky at the top
+- No horizontal scroll even when focusing on inputs
+- Content fits the device width
+
+### Interactions
+- **Click any step card** to mark it **Done** → card fades and moves to the bottom
+- **Reset done** button appears (only when ≥1 step is marked done) — clears all done marks
+- **Clear plan** clears the plan and returns to initial input state
+- All changes are instantaneous; no auto-save
 
 ## Project files
 
-* `index.html` — structure + templates
-* `styles.css` — styling, layout, responsive behavior
-* `app.js` — optimization logic + rendering + interactions
+- `index.html` — HTML structure + template definitions
+- `styles.css` — responsive design, dark/light mode support, animations
+- `app.js` — DP optimization algorithm, rendering, event handling
 
 ## How to use
 
-1. Open `index.html` in a browser.
-2. Enter your **Meal total**.
-3. Optionally enter **Remaining benefit** and **Remaining taps**.
-4. Click **Optimize**.
-5. Follow **Payment steps**, tapping each as you complete it.
-6. Use **Reset done** (only when needed) or **Clear plan** to start over.
+1. **Open** `index.html` in any modern web browser
+2. **Enter meal total** (required) — the amount you need to pay
+3. **Optionally enter:**
+   - Remaining EPassi benefit (€) — leave blank to default to €294
+   - Remaining EPassi taps — leave blank for unlimited taps
+4. **Click Optimize** to compute the best payment plan
+5. **Review the plan:**
+   - Company contribution (how much your employer pays)
+   - Salary deduction (amount from your taxed salary)
+   - Personal card charge (your out-of-pocket payment)
+   - Remaining balance & taps (if both were provided)
+6. **Follow the payment steps:**
+   - Use each EPassi tap in order
+   - Pay the personal card amount (if shown)
+   - Tap each step card as you complete it
+7. **Start over:** Use **Clear plan** or enter new values and **Optimize** again
 
-## Notes
+### Example scenario
 
-* Plans are computed fresh each time; no data is stored or synced automatically.
-* If you want persistence (remembering the last plan and done states), that can be added with localStorage later.
+- Meal costs **€23.33**
+- You have **€294 remaining EPassi benefit**
+- You have **20 remaining taps**
+
+**Optimal result:** €11.50 + €11.80 
+- Company pays: ~€6.57
+- Salary deduction: ~€17.13
+- Personal card: €0 
+- Taps used: 2
+
+## Technical notes
+
+- **No data persistence** — plans are computed on-the-fly; refresh clears everything
+- **Browser support** — works on all modern browsers (Chrome, Firefox, Safari, Edge)
+- **Performance** — DP algorithm computes instantly even for €3000+ meals

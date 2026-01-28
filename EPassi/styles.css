@@ -52,13 +52,14 @@
 html,
 body {
   height: 100%;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 body {
   margin: 0;
   font-family: var(--font-main);
   color: var(--text-main);
-  overflow-x: hidden;
   background: var(--bg-body);
 }
 
@@ -98,9 +99,11 @@ body::after {
 }
 
 .shell {
+  width: 100%;
   max-width: var(--shell-width);
   margin: 0 auto;
   padding: 0 var(--s5);
+  box-sizing: border-box;
 }
 
 .main {
@@ -112,7 +115,7 @@ body::after {
   position: sticky;
   top: 0;
   height: var(--topbar-h);
-  z-index: 10;
+  z-index: 1000;
   border-bottom: 1px solid rgba(88, 102, 138, 0.3);
   background: rgba(5, 8, 18, 0.72);
   backdrop-filter: blur(18px);
@@ -145,14 +148,9 @@ body::after {
   width: 40px;
   height: 40px;
   border-radius: 14px;
-  display: grid;
-  place-items: center;
-  font-family: var(--font-ui);
-  font-weight: 900;
-  letter-spacing: 0.06em;
-  color: #061018;
-  background: linear-gradient(135deg, var(--accent), var(--blue));
-  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.35);
+  display: block;
+  object-fit: contain;
+  object-position: center;
   flex: 0 0 auto;
 }
 
@@ -334,7 +332,7 @@ input[type="text"] {
   background: rgba(5, 8, 18, 0.82);
   color: var(--text-main);
   font-family: var(--font-ui);
-  font-size: 0.98rem;
+  font-size: 16px;
   outline: none;
   line-height: 1.2;
   transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
@@ -690,6 +688,14 @@ input:focus {
 
   .topbar__title {
     font-size: 1rem;
+  }
+
+  .shell {
+    padding: 0 var(--s4);
+  }
+
+  body {
+    overflow-x: hidden;
   }
 }
 

@@ -58,6 +58,28 @@ function optimizePlan(mealCents, benefitCents, remainingTaps = Infinity) {
     if (bestPlan === null || comparePlans(plan, bestPlan) > 0) bestPlan = plan;
   }
 
+  // Consolidation rule: if personal card is small and there's an ePassi tap < 14€,
+  // merge personal card into that tap if the result is still < 14€
+  if (bestPlan && bestPlan.personalCard > 0 && bestPlan.taps.length > 0) {
+    const smallestTapIndex = bestPlan.taps.reduce((minIdx, tap, i) => 
+      tap < bestPlan.taps[minIdx] ? i : minIdx, 0);
+    const smallestTap = bestPlan.taps[smallestTapIndex];
+
+    if (smallestTap < 1400 && smallestTap + bestPlan.personalCard < 1400) {
+      const oldTap = bestPlan.taps[smallestTapIndex];
+      const newTap = oldTap + bestPlan.personalCard;
+      
+      // Recalculate effects with the consolidated tap
+      const { companyPay: oldCompany, salaryDeduction: oldDeduction } = calcTapEffects(oldTap);
+      const { companyPay: newCompany, salaryDeduction: newDeduction } = calcTapEffects(newTap);
+      
+      bestPlan.taps[smallestTapIndex] = newTap;
+      bestPlan.companyPay = bestPlan.companyPay - oldCompany + newCompany;
+      bestPlan.salaryDeduction = bestPlan.salaryDeduction - oldDeduction + newDeduction;
+      bestPlan.personalCard = 0;
+    }
+  }
+
   return bestPlan;
 }
 
