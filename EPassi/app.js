@@ -58,8 +58,6 @@ function optimizePlan(mealCents, benefitCents, remainingTaps = Infinity) {
     if (bestPlan === null || comparePlans(plan, bestPlan) > 0) bestPlan = plan;
   }
 
-  // Consolidation rule: if personal card is small and there's an ePassi tap < 14€,
-  // merge personal card into that tap if the result is still < 14€
   if (bestPlan && bestPlan.personalCard > 0 && bestPlan.taps.length > 0) {
     const smallestTapIndex = bestPlan.taps.reduce((minIdx, tap, i) => 
       tap < bestPlan.taps[minIdx] ? i : minIdx, 0);
@@ -69,7 +67,6 @@ function optimizePlan(mealCents, benefitCents, remainingTaps = Infinity) {
       const oldTap = bestPlan.taps[smallestTapIndex];
       const newTap = oldTap + bestPlan.personalCard;
       
-      // Recalculate effects with the consolidated tap
       const { companyPay: oldCompany, salaryDeduction: oldDeduction } = calcTapEffects(oldTap);
       const { companyPay: newCompany, salaryDeduction: newDeduction } = calcTapEffects(newTap);
       
@@ -104,8 +101,22 @@ function updateLayoutMode() {
 }
 
 function showPlanSections(show) {
-  $("results-section").style.display = show ? "" : "none";
-  $("payment-taps-section").style.display = show ? "" : "none";
+  const resultsSection = $("results-section");
+  const stepsSection = $("payment-taps-section");
+  const leftCol = $("left-col");
+  const rightCol = $("right-col");
+
+  if (show) {
+    resultsSection.style.display = "";
+    stepsSection.style.display = "";
+    
+    // Trigger animation by setting display then forcing reflow
+    leftCol.offsetHeight;
+    rightCol.offsetHeight;
+  } else {
+    resultsSection.style.display = "none";
+    stepsSection.style.display = "none";
+  }
   updateLayoutMode();
 }
 
@@ -127,11 +138,10 @@ function flipReorder(container, reorderFn) {
 
     if (dx || dy) {
       el.style.transform = `translate(${dx}px, ${dy}px)`;
-      el.style.transition = "transform 0s";
-      requestAnimationFrame(() => {
-        el.style.transition = "transform 220ms ease";
-        el.style.transform = "";
-      });
+      el.style.transition = "none";
+      el.offsetHeight; // Force reflow
+      el.style.transition = "transform 450ms cubic-bezier(0.4, 0, 0.2, 1), opacity 450ms cubic-bezier(0.4, 0, 0.2, 1)";
+      el.style.transform = "";
     }
   }
 }
@@ -161,7 +171,7 @@ function syncStepsHeight() {
   }
 
   const targetH = Math.round(left.getBoundingClientRect().height);
-  stepsSection.style.height = `${targetH}px`;
+  stepsSection.style.maxHeight = `${targetH}px`;
 
   const header = stepsSection.querySelector(".card__header");
   const headerH = header ? Math.round(header.getBoundingClientRect().height) : 0;
@@ -185,6 +195,20 @@ function addSummaryCard(container, { label, value, sub, variantClass }) {
   if (sub) {
     card.classList.add("has-sub");
     subEl.textContent = sub;
+    
+    // Add hint icon only for warn cards
+    if (variantClass === "summary-card--warn") {
+      const hint = document.createElement("div");
+      hint.className = "summary-card__hint";
+      hint.setAttribute("aria-hidden", "true");
+      hint.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+      card.appendChild(hint);
+      
+      // Add tap to expand/collapse on mobile
+      card.addEventListener("click", () => {
+        card.classList.toggle("expanded");
+      });
+    }
   }
 
   container.appendChild(card);
@@ -223,7 +247,73 @@ function attachDoneBehavior(card, paymentPlan) {
     updateResetVisibility();
   };
 
-  card.addEventListener("click", toggle);
+  let startX = 0;
+  let startY = 0;
+  let isDragging = false;
+
+  const handleDragStart = (x, y) => {
+    startX = x;
+    startY = y;
+    isDragging = false;
+    card.style.transition = "none";
+    card.style.userSelect = "none";
+  };
+
+  const handleDragMove = (x, y) => {
+    const currentX = x;
+    const currentY = y;
+    const diffX = currentX - startX;
+    const diffY = currentY - startY;
+
+    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 5) {
+      isDragging = true;
+      const progress = Math.max(0, Math.min(1, diffX / 150));
+      card.style.setProperty("--swipe-progress", progress);
+      card.style.transform = `translateX(${diffX}px)`;
+    }
+  };
+
+  const handleDragEnd = () => {
+    card.style.transition = "";
+    card.style.userSelect = "";
+    if (isDragging) {
+      const swipeProgress = parseFloat(card.style.getPropertyValue("--swipe-progress") || 0);
+
+      if (swipeProgress > 0.4) {
+        toggle();
+      }
+      
+      card.style.transform = "";
+      card.style.setProperty("--swipe-progress", "");
+      isDragging = false;
+    }
+  };
+
+  // Touch events
+  card.addEventListener("touchstart", (e) => {
+    handleDragStart(e.touches[0].clientX, e.touches[0].clientY);
+  });
+
+  card.addEventListener("touchmove", (e) => {
+    handleDragMove(e.touches[0].clientX, e.touches[0].clientY);
+  });
+
+  card.addEventListener("touchend", handleDragEnd);
+
+  // Mouse events
+  card.addEventListener("mousedown", (e) => {
+    handleDragStart(e.clientX, e.clientY);
+  });
+
+  card.addEventListener("mousemove", (e) => {
+    if (isDragging || (e.buttons === 1 && Math.abs(e.clientX - startX) > 5)) {
+      handleDragMove(e.clientX, e.clientY);
+    }
+  });
+
+  card.addEventListener("mouseup", handleDragEnd);
+  card.addEventListener("mouseleave", handleDragEnd);
+
   card.addEventListener("keydown", (e) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
@@ -256,6 +346,7 @@ function renderPlan(plan) {
   addSummaryCard(summaryGrid, {
     label: "Salary deduction",
     value: money(plan.salaryDeduction),
+    sub: `Total paid: ${money(plan.salaryDeduction + plan.personalCard)}`,
     variantClass: "summary-card--warn",
   });
 

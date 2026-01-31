@@ -50,21 +50,31 @@ The app uses **dynamic programming** to find the globally optimal payment plan:
 ## UI behavior
 
 ### Desktop (≥981px)
-- **Left column:** Inputs card + Payment plan card
-- **Right column:** Payment steps card (synchronized height with left column, scrolls internally)
+- **Left column:** Inputs card + Payment plan card (animated slide-in from left)
+- **Right column:** Payment steps card (animated slide-in from right)
 - Sticky topbar stays visible while scrolling content
+- Columns animated in with smooth easing on page load
 
 ### Mobile (<981px)
 - Sections stack vertically
 - Page scrolls normally; topbar remains sticky at the top
 - No horizontal scroll even when focusing on inputs
 - Content fits the device width
+- No column animations on mobile (instant load for better UX)
 
 ### Interactions
-- **Click any step card** to mark it **Done** → card fades and moves to the bottom
+- **Swipe left on any step card** to mark it **Done** → smooth animation, card fades and moves to bottom
+- **Mouse drag on desktop** also works as an alternative to swipe for marking cards done
+- Visual drag indicator shows swipe progress in real-time
 - **Reset done** button appears (only when ≥1 step is marked done) — clears all done marks
 - **Clear plan** clears the plan and returns to initial input state
-- All changes are instantaneous; no auto-save
+- All animations use smooth easing curves (cubic-bezier) for premium feel
+- **Dark & Light mode support** — automatically adapts to system color preference
+
+### Animation details
+- **Card reordering:** 450ms smooth transition when done cards move to bottom
+- **Column slide-in (desktop):** 800ms easing when page first loads
+- **Color scheme:** Automatic dark/light mode based on system preference
 
 ## Project files
 
